@@ -1,6 +1,7 @@
 import { common } from '@kit.AbilityKit';
 import { router } from '@kit.ArkUI';
 import { webview } from '@kit.ArkWeb';
+import { window } from '@kit.ArkUI';
 import { BusinessError } from '@kit.BasicServicesKit';
 import { PanelStore } from '../store/PanelStore';
 import { PanelApi } from '../net/PanelApi';
@@ -35,9 +36,32 @@ struct Browse {
   aboutToAppear(): void {
     const context: common.UIAbilityContext = getContext(this) as common.UIAbilityContext;
     this.store = new PanelStore(context);
+    this.setSystemBars(false);
     this.prepare();
   }
 
+  aboutToDisappear(): void {
+    // Give the bars back to the rest of the app.
+    this.setSystemBars(true);
+  }
+
+  /** The page is the product: hide the system bars while it owns the screen. */
+  private setSystemBars(visible: boolean): void {
+    try {
+      window.getLastWindow(getContext(this)).then((win: window.Window) => {
+        win.setWindowSystemBarEnable(visible ? ['status', 'navigation'] : []).catch(() => {});
+      }).catch(() => {});
+    } catch (error) {
+      const businessError: BusinessError = error as BusinessError;
+      this.status = `系统栏切换失败 ${businessError.code}`;
+    }
+  }
+
+  /** System back (gesture or key) leaves the container page. */
+  onBackPress(): boolean {
+    router.back();
+    return true;
+  }
   private async prepare(): Promise<void> {
     if (this.store === null) {
       return;
@@ -152,42 +176,6 @@ struct Browse {
           })
           .width('100%')
           .height('100%')
-
-          // Fullscreen by default: only two tiny ghost buttons stay on top of the
-          // page, so leaving and reloading never needs the old 48px bar.
-          Row() {
-            Text('‹')
-              .fontSize(24)
-              .fontColor(Theme.textPrimary)
-              .width(32)
-              .height(32)
-              .textAlign(TextAlign.Center)
-              .borderRadius(16)
-              .backgroundColor(Theme.glassStrong)
-              .onClick(() => {
-                router.back();
-              })
-            Blank()
-            Text('↻')
-              .fontSize(16)
-              .fontColor(Theme.textPrimary)
-              .width(32)
-              .height(32)
-              .textAlign(TextAlign.Center)
-              .borderRadius(16)
-              .backgroundColor(Theme.glassStrong)
-              .onClick(() => {
-                try {
-                  this.controller.refresh();
-                } catch (error) {
-                  const businessError: BusinessError = error as BusinessError;
-                  this.status = `刷新失败 ${businessError.code}`;
-                }
-              })
-          }
-          .width('100%')
-          .padding({ left: 10, right: 10, top: 8 })
-          .opacity(0.86)
         }
         .width('100%')
         .layoutWeight(1)
@@ -200,7 +188,7 @@ struct Browse {
       }
       .width('100%')
       .height('100%')
-      .padding({ top: 38 })
+      .padding({ top: 0 })
     }
     .width('100%')
     .height('100%')
