@@ -1,4 +1,5 @@
 import { common, wantAgent, Want } from '@kit.AbilityKit';
+import { window } from '@kit.ArkUI';
 import { BusinessError } from '@kit.BasicServicesKit';
 import { ImportIntent, NodeInfo, PanelEvent, PanelEventPayload, PendingApproval, SessionSummary, SnapshotProgress, SnapshotResponse } from '../model/PanelTypes';
 import { PanelApi } from '../net/PanelApi';
@@ -19,6 +20,9 @@ import { scanBarcode, scanCore } from '@kit.ScanKit';
 
 const MAX_LOG_LINES: number = 40;
 /** Client-side approval TTL; the host settles at 120s, so allow a little slack. */
+const GLASS_SIZE: number = 300;
+const CARD_WIDTH: number = 1120;
+const CARD_HEIGHT: number = 1460;
 const APPROVAL_TTL_MS: number = 150_000;
 
 /** An approval waiting for the user, kept minimal so it survives re-render cheaply. */
@@ -604,43 +608,53 @@ struct Index {
       this.ball.show(this.ballTitleLine(), this.ballContentLine());
     }
   }
+  /** 悬浮球 entry: now a self-drawn frosted block instead of the system ball. */
   private async toggleBall(): Promise<void> {
-    if (this.ball === null) {
+    if (this.floatView === null) {
       return;
     }
-    if (this.ballVisible) {
-      await this.ball.hide();
-      this.ballVisible = false;
+    if (this.floatWindowVisible) {
+      await this.floatView.stop();
+      this.floatWindowVisible = false;
       this.ballUserStopped = true;
-      this.appendLine('悬浮球已关闭');
-      return;
-    }
-    if (!this.ball.isSupported()) {
-      this.appendLine('悬浮球不可用（能力或权限不足）');
+      this.appendLine('玻璃块已关闭');
       return;
     }
     const context: common.UIAbilityContext = getContext(this) as common.UIAbilityContext;
-    const floatViewGranted: boolean = await CapabilityProbe.requestFloatView(context);
-    this.appendLine(`FLOAT_VIEW 授权：${floatViewGranted ? '已允许' : '未允许'}`);
-    // Bind the pair first (both must be unstarted), then start only the ball:
-    // the system expands the card when the ball is tapped.
-    let bound: boolean = false;
-    if (this.floatView !== null && FloatViewPresenter.isSupported()) {
-      const controller = await this.ball.ensureController();
-      if (controller !== null) {
-        bound = await this.floatView.bindTo(controller,
-          this.ball.params(this.ballTitleLine(), this.ballContentLine()));
-      }
+    const granted: boolean = await CapabilityProbe.requestFloatView(context);
+    if (!granted) {
+      this.appendLine('FLOAT_VIEW 未授权，玻璃块无法显示');
+      return;
     }
-    const ok: boolean = await this.ball.show(this.ballTitleLine(), this.ballContentLine());
-    this.ballVisible = ok;
+    await this.startGlass();
+  }
+
+  /** Compact size in px (~115vp on this density); the card is the expanded size. */
+  private async startGlass(): Promise<void> {
+    if (this.floatView === null) {
+      return;
+    }
+    this.pushCardState();
+    const min: window.Size = FloatViewPresenter.minSize();
+    const width: number = Math.max(GLASS_SIZE, min.width);
+    const height: number = Math.max(GLASS_SIZE, min.height);
+    const ok: boolean = await this.floatView.startGlass(width, height);
+    this.floatWindowVisible = ok;
     this.ballUserStopped = !ok;
-    this.floatWindowVisible = false;
-    this.pairBound = bound;
-    if (bound) {
-      this.ball.clearClick();
+    this.appendLine(ok ? '玻璃块已显示' : '玻璃块启动失败（见 hilog）');
+  }
+
+  /** Expand / collapse the same window; the card page derives its layout from size. */
+  private async resizeGlass(expand: boolean): Promise<void> {
+    if (this.floatView === null || !this.floatWindowVisible) {
+      return;
     }
-    this.appendLine(bound ? '球↔窗已绑定：点球展开卡片' : '悬浮球已打开（未绑定窗口）');
+    this.pushCardState();
+    if (expand) {
+      await this.floatView.resize(CARD_WIDTH, CARD_HEIGHT);
+    } else {
+      await this.floatView.resize(GLASS_SIZE, GLASS_SIZE);
+    }
   }
 
   /** Ball tap: hand the launch to the system through a tappable notification. */
@@ -818,7 +832,11 @@ struct Index {
         view.receivedAt = Date.now();
         this.decide(view, decision);
       });
-      emitter.on({ eventId: 1002 }, () => {
+      emitter.on({ eventId: 1004 }, (data: emitter.EventData) => {
+        const payload = data.data as Record<string, string>;
+        const action: string = payload.decision ?? '';
+        this.resizeGlass(action === 'expand');
+      });      emitter.on({ eventId: 1002 }, () => {
         this.appendLine('闪控窗请求回到主界面');
         this.bringToFront();
       });
@@ -1027,29 +1045,10 @@ struct Index {
         this.keepAliveMode = this.keepAlive.isRunning() ? mode : '';
         this.appendLine(this.keepAlive.isRunning() ? `自动保活：${mode}` : `自动保活失败：${mode}`);
       }
-      // Auto ball: it has to be created while the window is still visible,
-      // otherwise the system rejects the float window (1300020 / err 1017).
-      if (this.ball !== null) {
-      this.ball.setDark(this.darkMode);
-    }
-    if (!this.ballUserStopped && !this.ballVisible && this.ball !== null && this.ball.isSupported()) {
-        // Bind the pair BEFORE either starts so the system can expand the card on tap.
-        let bound: boolean = false;
-        if (this.floatView !== null && FloatViewPresenter.isSupported()) {
-          const controller = await this.ball.ensureController();
-          if (controller !== null) {
-            bound = await this.floatView.bindTo(controller,
-              this.ball.params(this.ballTitleLine(), this.ballContentLine()));
-          }
-        }
-        const shown: boolean = await this.ball.show(this.ballTitleLine(), this.ballContentLine());
-        this.ballVisible = shown;
-        this.pairBound = bound;
-        if (bound) {
-          this.ball.clearClick();
-        }
-        this.appendLine(shown ? (bound ? '悬浮球已就绪（点球展开卡片）' : '悬浮球已就绪（切后台常驻）')
-          : '悬浮球创建失败（见 hilog）');
+      // Glass block: a self-drawn float window, created while the app is still in
+      // the foreground (the system rejects float windows created later).
+      if (!this.ballUserStopped && !this.floatWindowVisible && FloatViewPresenter.isSupported()) {
+        await this.startGlass();
       }
     } catch (error) {
       this.status = `同步失败：${this.describe(error)}`;

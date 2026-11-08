@@ -1,5 +1,6 @@
 import { floatView, floatingBall } from '@kit.ArkUI';
 import { common } from '@kit.AbilityKit';
+import { window } from '@kit.ArkUI';
 import { BusinessError } from '@kit.BasicServicesKit';
 
 /**
@@ -36,6 +37,57 @@ export class FloatViewPresenter {
   update(state: Record<string, string>): void {
     for (const key of Object.keys(state)) {
       this.storage.setOrCreate<string>(key, state[key]);
+    }
+  }
+
+  /** Smallest window the system allows for this template. */
+  static minSize(): window.Size {
+    try {
+      const limits: floatView.FloatViewLimits =
+        floatView.getFloatViewLimits(floatView.FloatViewTemplateType.ROUNDED_RECTANGLE);
+      return limits.minSize;
+    } catch {
+      return { width: 120, height: 120 };
+    }
+  }
+
+  /**
+   * Start as a small, self-drawn glass block (no system floating ball involved).
+   * Must be called while the app is in the foreground, like any float window.
+   */
+  async startGlass(width: number, height: number): Promise<boolean> {
+    if (!FloatViewPresenter.isSupported()) {
+      return false;
+    }
+    try {
+      if (this.controller === null) {
+        this.controller = await floatView.create({
+          context: this.context,
+          templateType: floatView.FloatViewTemplateType.ROUNDED_RECTANGLE,
+          isConfirmOnClose: false
+        });
+        await this.controller.setUIContext(this.pagePath, this.storage);
+      }
+      await this.controller.setWindowSize({ width: width, height: height });
+      await this.controller.start();
+      return true;
+    } catch (error) {
+      const businessError: BusinessError = error as BusinessError;
+      console.error(`[panel] glass block start failed: ${businessError.code} ${businessError.message}`);
+      return false;
+    }
+  }
+
+  /** Grow into the card, or shrink back into the block. */
+  async resize(width: number, height: number): Promise<void> {
+    if (this.controller === null) {
+      return;
+    }
+    try {
+      await this.controller.setWindowSize({ width: width, height: height });
+    } catch (error) {
+      const businessError: BusinessError = error as BusinessError;
+      console.error(`[panel] glass block resize failed: ${businessError.code} ${businessError.message}`);
     }
   }
 

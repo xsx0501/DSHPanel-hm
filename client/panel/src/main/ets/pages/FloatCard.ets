@@ -1,30 +1,21 @@
 import { emitter } from '@kit.BasicServicesKit';
 import { common } from '@kit.AbilityKit';
-import { BusinessError } from '@kit.BasicServicesKit';
+import { window } from '@kit.ArkUI';
 import { CardStateStore } from '../store/CardStateStore';
 import { Theme } from '../theme/Theme';
 
 /**
  * The float view's own ArkUI page (rendered in a separate window/UIContext).
  *
- * It never talks to the network: state arrives through `emitter` from the main
- * page, and actions leave the same way so the page keeps a single authority over
- * the API client.
+ * Two shapes share this page, driven by the *window size* rather than by a pushed
+ * flag (the main window is often in the background, so pushes are unreliable):
+ *   - compact  → a small frosted glass block floating on the screen
+ *   - card     → the same content expanded: session, progress, recent events
+ * Tapping the block asks the main page to grow the window; the card shrinks it.
  */
 const EVENT_DECISION: number = 1001;
-const EVENT_OPEN_APP: number = 1002;
-const EVENT_STATE: number = 1003;
-
-/** State pushed from the main page into the card window. */
-interface CardStatePayload {
-  line: string;
-  status: string;
-  preview: string;
-  approvalId: string;
-  title: string;
-  metrics: string;
-  activity: string;
-}
+const EVENT_RESIZE: number = 1004;
+const CARD_MIN_WIDTH: number = 700;
 
 /** Payload carried through `emitter` from the card window back to the main page. */
 interface DecisionPayload {
@@ -35,7 +26,6 @@ interface DecisionPayload {
 @Entry
 @Component
 struct FloatCard {
-  @State private line: string = 'DSH';
   @State private status: string = '已连接';
   @State private preview: string = '';
   @State private approvalId: string = '';
@@ -46,15 +36,21 @@ struct FloatCard {
   @State private tokens: string = '';
   @State private pending: string = '';
   @State private sessionShort: string = '';
+  @State private expanded: boolean = false;
   private pollTimer: number = -1;
+  private sizeTimer: number = -1;
 
   aboutToAppear(): void {
     this.refresh();
-    // The main window is usually in the background while this card is visible, so
-    // pull the state ourselves instead of waiting for a push.
+    this.measure();
+    // The main window is usually in the background while this window is visible,
+    // so pull the state ourselves instead of waiting for a push.
     this.pollTimer = setInterval(() => {
       this.refresh();
     }, 1500);
+    this.sizeTimer = setInterval(() => {
+      this.measure();
+    }, 500);
   }
 
   aboutToDisappear(): void {
@@ -62,12 +58,29 @@ struct FloatCard {
       clearInterval(this.pollTimer);
       this.pollTimer = -1;
     }
+    if (this.sizeTimer >= 0) {
+      clearInterval(this.sizeTimer);
+      this.sizeTimer = -1;
+    }
+  }
+
+  /** The window size is the single source of truth for compact vs expanded. */
+  private async measure(): Promise<void> {
+    try {
+      const win: window.Window = await window.getLastWindow(getContext(this));
+      const width: number = win.getWindowProperties().windowRect.width;
+      const next: boolean = width > CARD_MIN_WIDTH;
+      if (next !== this.expanded) {
+        this.expanded = next;
+      }
+    } catch {
+      // Keep the current shape when the window is not ready yet.
+    }
   }
 
   private async refresh(): Promise<void> {
     const context: common.Context = getContext(this) as common.Context;
     const state: Record<string, string> = await CardStateStore.load(context);
-    console.info(`[panel] card refresh title=${state.title} metrics=${state.metrics}`);
     if (state.title !== undefined && state.title.length > 0) {
       this.title = state.title;
     }
@@ -79,9 +92,6 @@ struct FloatCard {
     }
     if (state.status !== undefined && state.status.length > 0) {
       this.status = state.status;
-    }
-    if (state.line !== undefined && state.line.length > 0) {
-      this.line = state.line;
     }
     if (state.preview !== undefined) {
       this.preview = state.preview;
@@ -103,15 +113,43 @@ struct FloatCard {
     }
   }
 
-
   private emit(eventId: number, approvalId: string, decision: string): void {
     const payload: DecisionPayload = { approvalId: approvalId, decision: decision };
     emitter.emit({ eventId: eventId }, { data: payload });
   }
 
-  build() {
-    Column({ space: 6 }) {
-      // Header: brand + live status.
+  /** The glass block: one number, one hint, frosted. */
+  @Builder
+  private CompactBlock() {
+    Column({ space: 2 }) {
+      Text(this.metrics)
+        .fontSize(16)
+        .fontWeight(FontWeight.Bold)
+        .fontColor(Theme.brand)
+        .maxLines(1)
+      Text(this.approvalId.length > 0 ? '待审批' : (this.sessionShort.length > 0 ? this.sessionShort : this.status))
+        .fontSize(9)
+        .fontColor(Theme.textSecondary)
+        .maxLines(1)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
+    }
+    .width('100%')
+    .height('100%')
+    .justifyContent(FlexAlign.Center)
+    .backgroundColor(Theme.glass)
+    .backgroundBlurStyle(BlurStyle.COMPONENT_THICK)
+    .borderRadius(26)
+    .border({ width: 1, color: Theme.border })
+    .shadow({ radius: 18, color: '#33000000', offsetX: 0, offsetY: 6 })
+    .onClick(() => {
+      this.emit(EVENT_RESIZE, '', 'expand');
+    })
+  }
+
+  /** The expanded card: the same window, more of the story. */
+  @Builder
+  private ExpandedCard() {
+    Column({ space: 8 }) {
       Row({ space: 6 }) {
         Text('DSH')
           .fontSize(12)
@@ -122,11 +160,18 @@ struct FloatCard {
           .fontColor(Theme.textSecondary)
           .layoutWeight(1)
           .maxLines(1)
-          .textOverflow({ overflow: TextOverflow.Ellipsis })
+        Text('收起')
+          .fontSize(11)
+          .fontColor(Theme.textSecondary)
+          .padding({ left: 8, right: 8, top: 3, bottom: 3 })
+          .backgroundColor(Theme.cardAlt)
+          .borderRadius(8)
+          .onClick(() => {
+            this.emit(EVENT_RESIZE, '', 'collapse');
+          })
       }
       .width('100%')
 
-      // Session title.
       Text(this.title.length > 0 ? this.title : '未选择会话')
         .fontSize(13)
         .fontColor(Theme.textPrimary)
@@ -134,57 +179,36 @@ struct FloatCard {
         .textOverflow({ overflow: TextOverflow.Ellipsis })
         .width('100%')
 
-      // Turn / step, the part that actually moves.
       Row({ space: 8 }) {
         Text(this.metrics)
-          .fontSize(20)
+          .fontSize(22)
           .fontWeight(FontWeight.Bold)
           .fontColor(Theme.textPrimary)
-      }
-      .width('100%')
-
-      // Meta chips: how much is going on, and anything waiting on the user.
-      Row({ space: 6 }) {
-        if (this.tokens.length > 0) {
-          Text(this.tokens)
-            .fontSize(9)
-            .fontColor(Theme.textSecondary)
-            .padding({ left: 6, right: 6, top: 2, bottom: 2 })
-            .backgroundColor(Theme.cardAlt)
-            .borderRadius(5)
-        }
+        Blank()
         if (this.pending.length > 0) {
           Text(this.pending)
-            .fontSize(9)
+            .fontSize(10)
             .fontColor(Theme.warning)
-            .padding({ left: 6, right: 6, top: 2, bottom: 2 })
+            .padding({ left: 8, right: 8, top: 3, bottom: 3 })
             .backgroundColor(Theme.warningSoft)
-            .borderRadius(5)
+            .borderRadius(6)
         }
-        if (this.sessionShort.length > 0) {
-          Text('# ' + this.sessionShort)
-            .fontSize(9)
-            .fontColor(Theme.textTertiary)
-            .maxLines(1)
+        if (this.tokens.length > 0) {
+          Text(this.tokens)
+            .fontSize(10)
+            .fontColor(Theme.textSecondary)
+            .padding({ left: 8, right: 8, top: 3, bottom: 3 })
+            .backgroundColor(Theme.cardAlt)
+            .borderRadius(6)
         }
       }
       .width('100%')
 
-      if (this.events.length === 0) {
-        Text(this.activity.length > 0 ? this.activity : '等待事件…')
-          .fontSize(10)
-          .fontColor(Theme.textTertiary)
-          .maxLines(2)
-          .textOverflow({ overflow: TextOverflow.Ellipsis })
-          .width('100%')
-      }
-
-      // Timeline: the three most recent lines are the real "why should I look".
       if (this.events.length > 0) {
-        Column({ space: 2 }) {
+        Column({ space: 3 }) {
           ForEach(this.events.split('\n'), (line: string) => {
             Text(line)
-              .fontSize(9)
+              .fontSize(10)
               .fontFamily('monospace')
               .fontColor(Theme.textTertiary)
               .maxLines(1)
@@ -193,11 +217,16 @@ struct FloatCard {
           }, (line: string, index: number) => line + index)
         }
         .width('100%')
-        .padding(6)
+        .padding(8)
         .backgroundColor(Theme.cardAlt)
-        .borderRadius(6)
+        .borderRadius(10)
+      } else {
+        Text(this.activity.length > 0 ? this.activity : '等待事件…')
+          .fontSize(11)
+          .fontColor(Theme.textTertiary)
+          .maxLines(2)
+          .width('100%')
       }
-
 
       if (this.approvalId.length > 0) {
         Text(this.preview.length > 0 ? this.preview : '等待审批')
@@ -207,18 +236,18 @@ struct FloatCard {
           .maxLines(2)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
           .width('100%')
-          .padding(6)
+          .padding(8)
           .backgroundColor(Theme.cardAlt)
-          .borderRadius(6)
+          .borderRadius(8)
         Row({ space: 8 }) {
           Text('拒绝')
             .fontSize(13)
             .fontColor(Theme.danger)
             .textAlign(TextAlign.Center)
-            .height(32)
+            .height(34)
             .layoutWeight(1)
             .backgroundColor(Theme.dangerSoft)
-            .borderRadius(8)
+            .borderRadius(9)
             .onClick(() => {
               this.emit(EVENT_DECISION, this.approvalId, 'REJECT');
             })
@@ -227,10 +256,10 @@ struct FloatCard {
             .fontWeight(FontWeight.Medium)
             .fontColor(Theme.textOnBrand)
             .textAlign(TextAlign.Center)
-            .height(32)
+            .height(34)
             .layoutWeight(1)
             .backgroundColor(Theme.brand)
-            .borderRadius(8)
+            .borderRadius(9)
             .onClick(() => {
               this.emit(EVENT_DECISION, this.approvalId, 'APPROVE');
             })
@@ -238,10 +267,28 @@ struct FloatCard {
         .width('100%')
       }
     }
-    .padding(12)
+    .padding(14)
     .width('100%')
+    .height('100%')
     .alignItems(HorizontalAlign.Start)
-    .justifyContent(FlexAlign.Center)
-    .backgroundColor(Theme.card)
+    .backgroundColor(Theme.glass)
+    .backgroundBlurStyle(BlurStyle.COMPONENT_THICK)
+    .borderRadius(22)
+    .border({ width: 1, color: Theme.border })
+    .shadow({ radius: 22, color: '#33000000', offsetX: 0, offsetY: 8 })
+  }
+
+  build() {
+    Column() {
+      if (this.expanded) {
+        this.ExpandedCard()
+      } else {
+        this.CompactBlock()
+      }
+    }
+    .width('100%')
+    .height('100%')
+    .padding(2)
+    .backgroundColor(Color.Transparent)
   }
 }
