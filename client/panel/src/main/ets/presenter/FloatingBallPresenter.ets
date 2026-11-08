@@ -35,7 +35,7 @@ export class FloatingBallPresenter {
 
   private async loadIcon(): Promise<image.PixelMap | null> {
     try {
-      const data: Uint8Array = this.context.resourceManager.getMediaByNameSync('ball_glass');
+      const data: Uint8Array = this.context.resourceManager.getMediaByNameSync('ball_face');
       const source: image.ImageSource = image.createImageSource(data.buffer as ArrayBuffer);
       return await source.createPixelMap();
     } catch (error) {
