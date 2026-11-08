@@ -78,6 +78,27 @@ export class FloatViewPresenter {
     }
   }
 
+  /**
+   * Bind the pair, then start only the float view at widthxheight.
+   * The bound float view is the carrier that survives backgrounding, so this is
+   * the only way to get a small *self-drawn* block on the desktop.
+   */
+  async startGlassBound(ballController: floatingBall.FloatingBallController,
+    ballParams: floatingBall.FloatingBallParams, width: number, height: number): Promise<boolean> {
+    if (!FloatViewPresenter.isSupported()) {
+      return false;
+    }
+    try {
+      await this.bindTo(ballController, ballParams);
+      await this.controller?.setWindowSize({ width: width, height: height });
+      await this.controller?.start();
+      return true;
+    } catch (error) {
+      const businessError: BusinessError = error as BusinessError;
+      console.error(`[panel] glass-bound start failed: ${businessError.code} `);
+      return false;
+    }
+  }
   /** Grow into the card, or shrink back into the block. */
   async resize(width: number, height: number): Promise<void> {
     if (this.controller === null) {

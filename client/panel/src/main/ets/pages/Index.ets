@@ -1061,9 +1061,9 @@ struct Index {
         this.keepAliveMode = this.keepAlive.isRunning() ? mode : '';
         this.appendLine(this.keepAlive.isRunning() ? `自动保活：${mode}` : `自动保活失败：${mode}`);
       }
-      // System ball, bound to our floating card. Created while the app is still in
-      // the foreground: the system rejects float windows created later, and the
-      // ball is the only carrier that survives the app going to the background.
+      // System ball, bound to our floating card. It is the only carrier the system
+      // keeps alive across backgrounding; the small self-drawn float view cannot
+      // survive on its own and cannot be transparent, so the ball stays the carrier.
       if (!this.ballUserStopped && !this.ballVisible && this.ball !== null && this.ball.isSupported()) {
         this.ball.setDark(this.darkMode);
         let bound: boolean = false;
