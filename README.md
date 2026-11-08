@@ -31,16 +31,13 @@ DSHPanel-hm/
 ### 1. 宿主机装插件
 
 ```bash
-# 从本仓库直装（HTTPS，只开 443 的机器也能装）
-dsh plugin --profile web add https://github.com/xsx0501/DSHPanel-hm.git
-# 上面这条会把仓库根当作包；插件在 host-plugin/ 子目录，见下方说明
-dsh-panel-bridge enable
+# 插件在 host-plugin/ 子目录，用 git 子目录语法直装（实测 pnpm 12 可用）
+dsh plugin --profile web add "https://github.com/xsx0501/DSHPanel-hm.git#path:/host-plugin"
+./node_modules/.bin/dsh-panel-bridge enable --profile web
 # 重启 DSH
 ```
 
-> ⚠️ 插件在 `host-plugin/` 子目录。`dsh plugin` 支持从 git 子目录安装：
-> `dsh plugin --profile web add "https://github.com/xsx0501/DSHPanel-hm.git#path:/host-plugin"`
-> 若你的 pnpm 版本不认 `#path:`，直接 clone 后从目录安装：
+> pnpm 版本不认 `#path:` 时，clone 后从目录装：
 > `git clone https://github.com/xsx0501/DSHPanel-hm && dsh plugin --profile web add ./DSHPanel-hm/host-plugin`
 
 细节（配置项、故障排查、Termux/proot 重启）见 [host-plugin/README.md](host-plugin/README.md)。
