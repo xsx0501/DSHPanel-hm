@@ -1,0 +1,32 @@
+{
+  "string": [
+    {
+      "name": "module_desc",
+      "value": "DSH 面板客户端"
+    },
+    {
+      "name": "DSHPanelAbility_desc",
+      "value": "DeepSeek Harness 鸿蒙客户端"
+    },
+    {
+      "name": "DSHPanelAbility_label",
+      "value": "DSH 面板"
+    },
+    {
+      "name": "reason_float_ball",
+      "value": "在应用切到后台时用悬浮球显示 Agent 任务进度"
+    },
+    {
+      "name": "reason_float_view",
+      "value": "展开闪控窗查看流式摘要并直接批准或拒绝敏感操作"
+    },
+    {
+      "name": "reason_bg_system",
+      "value": "会话运行期间保持后台连接，保证任务不中断"
+    },
+    {
+      "name": "reason_bg_running",
+      "value": "后台维持与 DSH 节点的长连接以接收任务状态"
+    }
+  ]
+}

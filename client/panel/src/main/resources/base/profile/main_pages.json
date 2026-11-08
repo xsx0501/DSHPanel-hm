@@ -1,0 +1,8 @@
+{
+  "src": [
+    "pages/Index",
+    "pages/FloatCard",
+    "pages/Browse",
+    "pages/Nodes"
+  ]
+}

@@ -1,0 +1,106 @@
+{
+  "module": {
+    "name": "panel",
+    "type": "entry",
+    "description": "$string:module_desc",
+    "mainElement": "DSHPanelAbility",
+    "deviceTypes": [
+      "phone",
+      "tablet",
+      "2in1"
+    ],
+    "deliveryWithInstall": true,
+    "installationFree": false,
+    "pages": "$profile:main_pages",
+    "requestPermissions": [
+      {
+        "name": "ohos.permission.INTERNET"
+      },
+      {
+        "name": "ohos.permission.GET_NETWORK_INFO"
+      },
+      {
+        "name": "ohos.permission.STORE_PERSISTENT_DATA"
+      },
+      {
+        "name": "ohos.permission.KEEP_BACKGROUND_RUNNING",
+        "reason": "$string:reason_bg_running",
+        "usedScene": {
+          "abilities": [
+            "DSHPanelAbility"
+          ],
+          "when": "inuse"
+        }
+      },
+      {
+        "name": "ohos.permission.USE_FLOAT_BALL",
+        "reason": "$string:reason_float_ball",
+        "usedScene": { "abilities": ["DSHPanelAbility"], "when": "inuse" }
+      },
+      {
+        "name": "ohos.permission.FLOAT_VIEW",
+        "reason": "$string:reason_float_view",
+        "usedScene": { "abilities": ["DSHPanelAbility"], "when": "inuse" }
+      },
+      {
+        "name": "ohos.permission.KEEP_BACKGROUND_RUNNING_SYSTEM",
+        "reason": "$string:reason_bg_system",
+        "usedScene": { "abilities": ["DSHPanelAbility"], "when": "inuse" }
+      },
+
+      // ACL-only permissions (system_basic). Uncomment after installing an ACL
+      // profile: `tools/enable-acl-perms.ps1 -Enable`.
+    ],
+    "abilities": [
+      {
+        "name": "DSHPanelAbility",
+        "srcEntry": "./ets/dshpanelability/DSHPanelAbility.ets",
+        "description": "$string:DSHPanelAbility_desc",
+        "icon": "$media:layered_image",
+        "label": "$string:DSHPanelAbility_label",
+        "startWindowIcon": "$media:startIcon",
+        "startWindowBackground": "$color:start_window_background",
+        "exported": true,
+        "backgroundModes": [
+          "taskKeeping",
+          "dataTransfer"
+        ],
+        "skills": [
+          {
+            "entities": [
+              "entity.system.home"
+            ],
+            "actions": [
+              "ohos.want.action.home"
+            ]
+          },
+          {
+            "actions": [
+              "ohos.want.action.viewData"
+            ],
+            "uris": [
+              {
+                "scheme": "dsh",
+                "host": "connect"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "extensionAbilities": [
+      {
+        "name": "DSHPanelBackupAbility",
+        "srcEntry": "./ets/dshpanelbackupability/DSHPanelBackupAbility.ets",
+        "type": "backup",
+        "exported": false,
+        "metadata": [
+          {
+            "name": "ohos.extension.backup",
+            "resource": "$profile:backup_config"
+          }
+        ]
+      }
+    ]
+  }
+}

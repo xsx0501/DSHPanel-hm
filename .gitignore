@@ -1,5 +1,26 @@
-﻿node_modules/
+# HarmonyOS build outputs and machine-local state
+**/build/
+**/oh_modules/
+**/.hvigor/
+**/.cxx/
+**/.test/
+**/.appanalyzer/
+local.properties
+.idea/
+.clangd
+
+# signing material — never commit
+*.p12
+*.cer
+*.p7b
+*.csr
+*.keystore
+
+# node / packaging
+node_modules/
 *.tgz
 *.log
-.DS_Store
-/tmp/
+
+# scratch
+.tmp/
+screenshots/
