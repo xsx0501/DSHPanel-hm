@@ -6,16 +6,25 @@ DSH 的鸿蒙客户端：ArkTS / Stage 模型，目标 `HarmonyOS NEXT`，API 20
 
 ## 构建
 
-前置：DevEco Studio（含 HarmonyOS SDK），命令行 hvigor 可用。
+前置：DevEco Studio（含 HarmonyOS SDK）。仓库里**没有** `hvigorw` 包装脚本，用它自带的：
+
+| 系统 | hvigor 路径 |
+| --- | --- |
+| Windows | `"C:\Program Files\Huawei\DevEco Studio\tools\hvigor\bin\hvigorw.bat"` |
+| macOS | `/Applications/DevEco-Studio.app/Contents/tools/hvigor/bin/hvigorw` |
+| Linux | `~/DevEco-Studio/tools/hvigor/bin/hvigorw` |
 
 ```bash
+export DEVECO_SDK_HOME="/path/to/DevEco-Studio/sdk"   # Windows: 用 setx 或 $env:
 cd client
-# 首次需要 ohpm 依赖
-./hvigorw --mode module -p product=default -p module=panel@default \
+"<hvigor>" --mode module -p product=default -p module=panel@default \
   -p buildMode=debug assembleHap --no-daemon
 ```
 
 产物：`panel/build/default/outputs/default/panel-default-signed.hap`
+
+> 未配置签名时 hvigor 仍能编译，只是产物叫 `panel-default-unsigned.hap`，**装不上设备**。
+> 实测：从本仓库干净拷贝出来构建，产出 `panel-default-unsigned.hap` 668,597 字节。
 
 安装到设备：
 
