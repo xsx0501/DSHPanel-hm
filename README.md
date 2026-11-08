@@ -44,7 +44,15 @@ dsh plugin --profile web add "https://github.com/xsx0501/DSHPanel-hm.git#path:/h
 
 ### 2. 手机装客户端
 
-用 DevEco Studio 打开 `client/`，配置签名（见 [client/README.md](client/README.md)），构建安装：
+Release 里下载的是**未签名 HAP**，装到真机前必须先签名。两条路，任选其一。
+
+#### 路线 A：自己签名（可控，推荐正式使用）
+
+用 DevEco Studio 打开 `client/`：
+
+1. *File → Project Structure → Signing Configs* → 勾选 **Automatically generate signature**（登录华为账号）
+2. App 用了 `FLOAT_VIEW` 等受控权限，需要在签名 profile 里补 ACL —— 在 DevEco 的 `signingConfigs` 界面展开 *Advanced*，或直接编辑生成的 `.p7b` 前先在 `build-profile.json5` 里声明 ACL
+3. *Build → Build Hap(s)/APP(s)*，或命令行：
 
 ```bash
 cd client
@@ -52,6 +60,30 @@ cd client
   -p buildMode=debug assembleHap --no-daemon
 hdc install -r panel/build/default/outputs/default/panel-default-signed.hap
 ```
+
+已有签名材料（`.p12/.p7b/.cer`）也可以直接对下载的 HAP 重签：
+
+```bash
+java -jar "$DEVECO_SDK_HOME/default/openharmony/toolchains/lib/hap-sign-tool.jar" sign-app \
+  -mode localSign -signAlg SHA256withECDSA \
+  -keyAlias "<别名>" -keystoreFile "<keystore.p12>" -keystorePwd "<库口令>" -keyPwd "<密钥口令>" \
+  -appCertFile "<cert.pem>" -profileFile "<profile.p7b>" \
+  -inFile DSHPanel-v0.2.0-unsigned.hap -outFile DSHPanel-signed.hap
+```
+
+#### 路线 B：用 Auto-Installer 一键装（小白省事）
+
+[`likuai2010/auto-installer`](https://github.com/likuai2010/auto-installer/)（现名**小白调试助手**）基于 `hdc`，能直接装 `.hap` / `.app` / `.hsp`，并支持**自定义证书**替换：
+
+- 下载：<https://github.com/likuai2010/auto-installer/releases>
+- 支持平台：Windows(x86) / macOS(x86、M1) / Linux(x86) / Android(arm64)
+- macOS 首次打开需执行：`xattr -d com.apple.quarantine xxx/hap_installer.app`
+- Linux 需先装 zenity，且**不要用 root/sudo 启动**
+- 手机端（HarmonyOS NEXT arm64）不能直接跑这个工具，要从电脑或 Android 设备连过去装
+
+把本仓库 Release 里的 `DSHPanel-*-unsigned.hap` 拖进去即可；工具会用自己的证书签名后安装。
+
+> 受控权限（`FLOAT_VIEW` 等）需要 profile 里带 ACL。Auto-Installer 的默认证书通常不含 ACL，这种情况请走路线 A，或把带有 ACL 的 profile 导进工具里替换默认证书。
 
 ### 3. 配对
 
