@@ -216,15 +216,24 @@ struct Index {
     }
   }
 
-  /** Returning from background: re-open the stream and re-sync the session list. */
-  /** The node page writes the active node; pick it up without a restart. */
-  private async syncActiveNode(): Promise<void> {
+  /**
+   * The node page writes the active node; pick it up without a restart.
+   * @returns true when the connection was rebuilt for a different node.
+   */
+  private async syncActiveNode(): Promise<boolean> {
     if (this.store === null) {
-      return;
+      return false;
     }
     const active: string = await (this.store as PanelStore).activeNodeId();
-    if (active.length === 0 || active === this.activeNodeId) {
-      return;
+    if (active.length === 0) {
+      return false;
+    }
+    if (active === this.activeNodeId) {
+      // Same id, but the address may have been edited or re-paired since.
+      const current: NodeInfo | undefined = await this.findNode(active);
+      if (current === undefined || current.baseUrl === this.importUrl) {
+        return false;
+      }
     }
     this.activeNodeId = active;
     const nodes = await (this.store as PanelStore).loadNodes();
@@ -236,13 +245,13 @@ struct Index {
       }
     }
     if (node === undefined) {
-      return;
+      return false;
     }
     const token: string = await (this.store as PanelStore).loadDeviceTokenFor(active);
     this.importUrl = node.baseUrl;
     if (token.length === 0) {
       this.appendLine(`节点 ${node.name} 没有设备令牌，请重新导入`);
-      return;
+      return false;
     }
     const api: PanelApi = new PanelApi(node.baseUrl);
     api.setDeviceToken(token);
@@ -252,11 +261,33 @@ struct Index {
     this.sessions = [];
     this.approvals = [];
     this.followSession = '';
+    // Session ids are host-scoped: keep neither the selection nor the "user picked"
+    // latch, otherwise the new host's events are filtered against a stale id.
+    this.activeSessionId = '';
+    this.userPickedSession = false;
     this.lastTurn = 0;
     this.lastStep = 0;
     this.appendLine(`切换节点：${node.name}`);
+    // A different host has its own sequence space and its own sessions.
+    this.lastSeq = 0;
+    this.resumeCursor = '';
+    this.stream.setResumeSince(0);
     await this.refreshSessions();
     this.openEvents();
+    return true;
+  }
+
+  private async findNode(id: string): Promise<NodeInfo | undefined> {
+    if (this.store === null) {
+      return undefined;
+    }
+    const nodes: NodeInfo[] = await (this.store as PanelStore).loadNodes();
+    for (const item of nodes) {
+      if (item.id === id) {
+        return item;
+      }
+    }
+    return undefined;
   }
   /**
    * Background catch-up: the OS may suspend the SSE socket, so while the page is
@@ -336,12 +367,19 @@ struct Index {
     }
   }
   onPageShow(): void {
-    if (this.api !== null && this.connected) {
-      this.appendLine('回到前台，重新同步');
-      this.stream.setResumeSince(this.lastSeq);
-      this.stream.restart();
-      this.refreshSessions();
-    }
+    // Coming back from the node page may mean a different host: rebuild first and
+    // skip the old-node resync, otherwise the session list keeps the old host.
+    this.syncActiveNode().then((switched: boolean) => {
+      if (switched) {
+        return;
+      }
+      if (this.api !== null && this.connected) {
+        this.appendLine('回到前台，重新同步');
+        this.stream.setResumeSince(this.lastSeq);
+        this.stream.restart();
+        this.refreshSessions();
+      }
+    });
   }
 
   private flushPending(): void {
@@ -1850,6 +1888,10 @@ struct Index {
         .duration(220)
         .onChange((index: number) => {
           this.activeTab = index;
+          // Entering the session list is exactly when a stale host shows up.
+          if (index === 1) {
+            this.syncActiveNode();
+          }
         })
         .width('100%')
         .layoutWeight(1)
