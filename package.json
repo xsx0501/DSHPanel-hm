@@ -1,0 +1,43 @@
+{
+  "name": "dsh-panel-bridge",
+  "version": "0.2.0",
+  "description": "DSH host plugin for the HarmonyOS panel client: device pairing, background SSE and out-of-app approvals",
+  "type": "module",
+  "bin": {
+    "dsh-panel-bridge": "./bin/dsh-panel-bridge.mjs"
+  },
+  "main": "lib/index.js",
+  "exports": {
+    ".": "./lib/index.js",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib/**/*.js",
+    "bin/*.mjs",
+    "tools/enable.py",
+    "README.md"
+  ],
+  "keywords": [
+    "dsh",
+    "deepseek-harness",
+    "plugin",
+    "harmonyos",
+    "approval"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "check": "node --check lib/index.js",
+    "enable": "python3 tools/enable.py"
+  },
+  "license": "MIT",
+  "peerDependencies": {
+    "@deepseek-ai/cordis": "~4.1.0"
+  },
+  "peerDependenciesMeta": {
+    "@deepseek-ai/cordis": {
+      "optional": true
+    }
+  }
+}
