@@ -140,6 +140,27 @@ nohup proot-distro login ubuntu -- bash -lc 'exec /usr/bin/dsh web --no-open --t
 
 ## 配对与二维码
 
+### 网页端（推荐）
+
+浏览器打开：
+
+```
+https://<你的域名>/panel          # 已登录 DSH 的电脑
+http://127.0.0.1:3080/panel       # 宿主机本机
+```
+
+页面直接渲染二维码 + 深链 + 一键复制，手机扫码即可配对，不用敲命令。
+
+访问控制：**loopback 直连**，或**带着 DSH 自己的登录 cookie**（会先向本机 `/` 校验一次）。页面里是活 token，所以对匿名访问一律 403。
+
+想让页面上显示公网地址（而不是 127.0.0.1），在挂载时给一次：
+
+```bash
+dsh-panel-bridge enable --profile web --public-url https://<你的域名>
+```
+
+### 命令行
+
 ```bash
 dsh-panel-bridge qr                       # 深链 + 浏览器二维码地址
 dsh-panel-bridge qr --url https://dsh.example.com
@@ -183,6 +204,7 @@ dsh-panel-bridge qr      [--url …] [--svg f]    配对深链 / 二维码
 | `approvalTimeoutMs` | `120000` | 审批超时自动拒绝 |
 | `takeOverApprovals` | `true` | 接管宿主审批队列（否则只旁听） |
 | `injectBridge` | `false` | 是否向 DSH 网页注入桥接脚本 |
+| `publicUrl` | 空 | 「配对页」展示的公网地址；空则由请求的 Host 推导 |
 
 ---
 

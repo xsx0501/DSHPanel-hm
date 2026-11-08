@@ -55,12 +55,11 @@ hdc install -r panel/build/default/outputs/default/panel-default-signed.hap
 
 ### 3. 配对
 
-```bash
-# 宿主机上出二维码（需要当前 DSH 的启动 token）
-dsh-panel-bridge qr --url https://<你的公网域名> --svg /tmp/pair.svg
-```
+浏览器打开 `https://<你的公网域名>/panel`（或宿主机上 `http://127.0.0.1:3080/panel`）——页面直接显示二维码和深链。
 
 手机：App 底部「更多」→「节点」→「扫码」。
+
+> 页面内置活 token：只有 loopback 或已登录 DSH 的浏览器能打开；匿名访问返回 403。
 
 ---
 

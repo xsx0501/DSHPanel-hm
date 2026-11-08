@@ -233,6 +233,133 @@ export function apply(ctx, config = {}) {
     logger('warn', `session telemetry not attached: ${error?.message}`)
   }
 
+  // ---- pairing page: the QR, in the browser -----------------------------------
+  // `/panel` renders the pairing card so nobody has to curl a query string
+  // together. It is reachable from loopback (operator on the host) and from any
+  // browser that already holds DSH's own auth cookie (their laptop), because the
+  // page carries a live startup token.
+  const PAIR_PAGE_PATH = '/panel'
+  const LOOPBACK = ['127.0.0.1', '::1', '::ffff:127.0.0.1']
+
+  const isLoopback = (req) => LOOPBACK.includes(String(req.socket?.remoteAddress ?? ''))
+
+  /** True when the request carries a cookie DSH itself accepts. */
+  const hasDshSession = async (req) => {
+    const cookie = req.headers?.cookie
+    if (typeof cookie !== 'string' || cookie === '') return false
+    try {
+      const res = await fetch(`http://127.0.0.1:${ctx.webServer?.port ?? 3080}/`, {
+        headers: { cookie, accept: 'text/html' },
+        redirect: 'manual'
+      })
+      return res.status === 200
+    } catch {
+      return false
+    }
+  }
+
+  /** Public origin this deployment is reached at, best effort. */
+  const resolveOrigin = (req) => {
+    const configured = typeof config?.publicUrl === 'string' ? config.publicUrl.trim() : ''
+    if (configured !== '') return configured.replace(/\/+$/, '')
+    const host = req.headers?.['x-forwarded-host'] ?? req.headers?.host
+    if (typeof host === 'string' && host !== '' && !host.startsWith('127.0.0.1') && !host.startsWith('localhost')) {
+      const proto = (req.headers?.['x-forwarded-proto'] ?? 'https').toString().split(',')[0].trim()
+      return `${proto}://${host}`
+    }
+    return `http://127.0.0.1:${ctx.webServer?.port ?? 3080}`
+  }
+
+  /** The launch token lives inside Connection's own authenticated URL. */
+  const launchDeepLink = (origin) => {
+    try {
+      const connection = ctx.get('connection')
+      const authenticated = connection?.authenticatedUrl?.(origin)
+      if (typeof authenticated !== 'string') return ''
+      const token = new URL(authenticated).searchParams.get('token') ?? ''
+      if (token === '') return ''
+      return `dsh://connect?endpoint=${encodeURIComponent(origin)}&token=${encodeURIComponent(token)}`
+    } catch {
+      return ''
+    }
+  }
+
+  const pairPageHtml = async (deepLink, origin) => {
+    let qr = ''
+    if (deepLink !== '') {
+      try {
+        const imported = await import('qrcode')
+        const mod = imported?.default ?? imported
+        qr = await mod.toString(deepLink, { type: 'svg', margin: 1, width: 320 })
+      } catch (error) {
+        diag.qr = { error: String(error?.message ?? error) }
+      }
+    }
+    const esc = (value) => String(value).replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]))
+    const body = deepLink === ''
+      ? `<p class="warn">当前进程拿不到启动 token（连接服务未就绪）。请在宿主机执行：<code>dsh-panel-bridge qr</code></p>`
+      : `<div class="qr">${qr}</div>
+         <p class="hint">手机：面板 App → 底部「更多」→「节点」→「扫码」</p>
+         <label class="field"><span>深链</span><input id="link" readonly value="${esc(deepLink)}"><button id="copy">复制</button></label>
+         <p class="note">启动 token 一次性：这台手机配对成功后它就失效。再配新设备请重启 DSH 后刷新本页。</p>`
+    return `<!doctype html>
+<html lang="zh-CN"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>DSH 面板配对</title>
+<style>
+  :root { color-scheme: light }
+  body { margin:0; font:14px/1.5 -apple-system,"HarmonyOS Sans","PingFang SC",system-ui,sans-serif;
+         background:#f4f6fa; color:#182431; display:flex; justify-content:center }
+  main { width:min(520px,92vw); margin:32px 0; background:#fff; border-radius:18px;
+         padding:22px 22px 18px; box-shadow:0 10px 30px rgba(16,32,64,.10) }
+  h1 { font-size:18px; margin:0 0 4px } .sub { color:#6b7480; font-size:12px; margin:0 0 16px }
+  .qr { display:flex; justify-content:center; padding:8px } .qr svg { width:min(320px,72vw); height:auto }
+  .hint { text-align:center; color:#182431; margin:4px 0 14px }
+  .field { display:flex; gap:8px; align-items:center; background:#f4f6fa; border-radius:12px; padding:8px 10px }
+  .field span { color:#6b7480; font-size:12px; white-space:nowrap }
+  .field input { flex:1; border:0; background:transparent; font:12px/1.4 ui-monospace,monospace; color:#182431 }
+  .field button { border:0; background:#0a59f7; color:#fff; border-radius:8px; padding:6px 10px; font-size:12px }
+  .note { color:#6b7480; font-size:12px; margin:12px 0 0 }
+  .warn { color:#b25b00; background:#fff6e8; border-radius:12px; padding:12px }
+  code { background:#eef1f6; border-radius:6px; padding:1px 5px }
+</style></head><body><main>
+  <h1>DSH 面板配对</h1>
+  <p class="sub">${esc(origin)} · 由 dsh-panel-bridge 生成</p>
+  ${body}
+</main>
+<script>
+  var b = document.getElementById('copy');
+  if (b) b.onclick = function () {
+    var input = document.getElementById('link');
+    input.select(); document.execCommand('copy');
+    b.textContent = '已复制'; setTimeout(function () { b.textContent = '复制' }, 1500);
+  };
+</script>
+</body></html>`
+  }
+
+  ctx.webServer.register({
+    path: PAIR_PAGE_PATH,
+    exact: true,
+    handler: async (req, res) => {
+      const loopback = isLoopback(req)
+      if (!loopback && !(await hasDshSession(req))) {
+        res.writeHead(403, { 'content-type': 'text/plain; charset=utf-8', 'cache-control': 'no-store' })
+        res.end('forbidden: open this page from the host, or sign in to DSH first')
+        return
+      }
+      const origin = resolveOrigin(req)
+      const deepLink = launchDeepLink(origin)
+      const html = await pairPageHtml(deepLink, origin)
+      res.writeHead(200, {
+        'content-type': 'text/html; charset=utf-8',
+        'cache-control': 'no-store',
+        'content-length': Buffer.byteLength(html)
+      })
+      res.end(html)
+    }
+  })
+
   // ---- pairing QR: what the phone scans to receive endpoint + startup token ----
   // Loopback only: the query carries a live startup token, and the operator is
   // the only one who should be able to turn it into an image.
