@@ -97,3 +97,14 @@ hdc install -r panel/build/default/outputs/default/panel-default-signed.hap
 ## License
 
 MIT
+---
+
+## 图标与素材
+
+应用图标使用「鲸鱼娘」同人形象，素材来自 [蓝色大肥鱼档案馆](https://github.com/EDMOK/blue-fish-archive)（`previews/deepseek-jushou-dazhaohu.webp`）。
+
+- 角色原作：**上善无形**（[Bilibili](https://space.bilibili.com/4456176)）
+- DeepSeek 元素女仆鲸鱼娘二次设计：**ZipZipPipe**（[Bilibili](https://space.bilibili.com/4168597)）
+- 整理与收录：**EDMOK**（[蓝色大肥鱼档案馆](https://fisharchive.cc/)）
+
+二次设计作品依 **CC BY-NC-SA 4.0** 授权：非商业使用，二创需遵循相同协议。本项目为个人非商业工具，图标仅用于客户端标识；如原权利人提出异议，会立即替换。
