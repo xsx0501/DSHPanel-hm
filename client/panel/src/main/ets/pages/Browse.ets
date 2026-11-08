@@ -6,6 +6,7 @@ import { PanelStore } from '../store/PanelStore';
 import { PanelApi } from '../net/PanelApi';
 import { PanelWebBridge } from '../web/PanelWebBridge';
 import { PanelTelemetry, TelemetryHub } from '../domain/TelemetryHub';
+import { Theme } from '../theme/Theme';
 
 /**
  * ArkWeb container (Mod-WebBridge, docs/design.md §7.4).
@@ -28,8 +29,8 @@ struct Browse {
   @State private status: string = '准备中…';
   @State private ready: boolean = false;
   @State private target: string = '';
-  /** Immersive mode: our own chrome (title bar) is hidden, the page owns the screen. */
-  @State private immersive: boolean = false;
+  /** The page always owns the screen; the flag is kept for future chrome toggles. */
+  @State private immersive: boolean = true;
 
   aboutToAppear(): void {
     const context: common.UIAbilityContext = getContext(this) as common.UIAbilityContext;
@@ -96,79 +97,17 @@ struct Browse {
       Column()
         .width('100%')
         .height('100%')
-        .backgroundColor('#FFFFFF')
+        .backgroundColor(Theme.bg)
         .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM])
 
       Column() {
-      // Compact, frosted chrome: the page itself is the product, so the bar never
-      // competes with it (no chunky filled buttons).
-      if (!this.immersive) {
-      Row({ space: 10 }) {
-        Text('‹')
-          .fontSize(26)
-          .fontColor('#182431')
-          .width(34)
-          .height(34)
-          .textAlign(TextAlign.Center)
-          .borderRadius(17)
-          .backgroundColor('rgba(255,255,255,0.7)')
-          .onClick(() => {
-            router.back();
-          })
-
-        Column({ space: 1 }) {
-          Text('DSH 网页')
-            .fontSize(14)
-            .fontWeight(FontWeight.Medium)
-            .fontColor('#182431')
-          Text(this.status)
-            .fontSize(10)
-            .fontColor('#6B7480')
-            .maxLines(1)
-            .textOverflow({ overflow: TextOverflow.Ellipsis })
-        }
-        .alignItems(HorizontalAlign.Start)
-        .layoutWeight(1)
-
-        Text('↻')
-          .fontSize(18)
-          .fontColor('#182431')
-          .width(34)
-          .height(34)
-          .textAlign(TextAlign.Center)
-          .borderRadius(17)
-          .backgroundColor('rgba(255,255,255,0.7)')
-          .onClick(() => {
-            try {
-              this.controller.refresh();
-            } catch (error) {
-              const businessError: BusinessError = error as BusinessError;
-              this.status = `刷新失败 ${businessError.code}`;
-            }
-          })
-
-        // Fullscreen: drop the whole bar and let the page use the reclaimed space.
-        Text('⤢')
-          .fontSize(16)
-          .fontColor('#182431')
-          .width(34)
-          .height(34)
-          .textAlign(TextAlign.Center)
-          .borderRadius(17)
-          .backgroundColor('rgba(255,255,255,0.7)')
-          .onClick(() => {
-            this.immersive = true;
-          })
-      }
-      .width('100%')
-      .padding({ left: 12, right: 12, top: 8, bottom: 8 })
-      .backgroundBlurStyle(BlurStyle.COMPONENT_THIN)
-      .backgroundColor('rgba(255,255,255,0.55)')
-      }
-
       if (this.ready) {
         Stack({ alignContent: Alignment.TopEnd }) {
         Web({ src: this.target, controller: this.controller })
+          // Let the page see prefers-color-scheme from the system, and force a dark
+          // rendering when the page ships no dark styles of its own.
+          .darkMode(WebDarkMode.Auto)
+          .forceDarkAccess(true)
           .javaScriptAccess(true)
           .domStorageAccess(true)
           .fileAccess(false)
@@ -214,22 +153,41 @@ struct Browse {
           .width('100%')
           .height('100%')
 
-          // Only shown in immersive mode: a small ghost handle that brings the
-          // chrome back, so hiding the bar never traps the user.
-          if (this.immersive) {
-            Text('⤡')
-              .fontSize(14)
-              .fontColor('#FFFFFF')
-              .width(30)
-              .height(30)
+          // Fullscreen by default: only two tiny ghost buttons stay on top of the
+          // page, so leaving and reloading never needs the old 48px bar.
+          Row() {
+            Text('‹')
+              .fontSize(24)
+              .fontColor(Theme.textPrimary)
+              .width(32)
+              .height(32)
               .textAlign(TextAlign.Center)
-              .borderRadius(15)
-              .backgroundColor('rgba(24,36,49,0.42)')
-              .margin({ top: 10, right: 10 })
+              .borderRadius(16)
+              .backgroundColor(Theme.glassStrong)
               .onClick(() => {
-                this.immersive = false;
+                router.back();
+              })
+            Blank()
+            Text('↻')
+              .fontSize(16)
+              .fontColor(Theme.textPrimary)
+              .width(32)
+              .height(32)
+              .textAlign(TextAlign.Center)
+              .borderRadius(16)
+              .backgroundColor(Theme.glassStrong)
+              .onClick(() => {
+                try {
+                  this.controller.refresh();
+                } catch (error) {
+                  const businessError: BusinessError = error as BusinessError;
+                  this.status = `刷新失败 ${businessError.code}`;
+                }
               })
           }
+          .width('100%')
+          .padding({ left: 10, right: 10, top: 8 })
+          .opacity(0.86)
         }
         .width('100%')
         .layoutWeight(1)

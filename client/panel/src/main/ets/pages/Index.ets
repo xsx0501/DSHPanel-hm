@@ -1255,7 +1255,7 @@ struct Index {
 
   // ── presentation helpers ────────────────────────────────────────────────
 
-  private riskColor(level: string): string {
+  private riskColor(level: string): ResourceColor {
     if (level === 'CRITICAL' || level === 'HIGH') {
       return Theme.danger;
     }
@@ -1265,7 +1265,7 @@ struct Index {
     return Theme.success;
   }
 
-  private riskSoft(level: string): string {
+  private riskSoft(level: string): ResourceColor {
     if (level === 'CRITICAL' || level === 'HIGH') {
       return Theme.dangerSoft;
     }
@@ -1312,7 +1312,7 @@ struct Index {
     this.rememberIds = this.rememberIds.slice();
   }
 
-  private statusDotColor(): string {
+  private statusDotColor(): ResourceColor {
     if (!this.connected) {
       return Theme.textTertiary;
     }
@@ -1391,14 +1391,14 @@ struct Index {
         Text(this.lastTurn > 0 ? `Turn ${this.lastTurn}` : '待命中')
           .fontSize(32)
           .fontWeight(FontWeight.Bold)
-          .fontColor('#FFFFFF')
+          .fontColor(Theme.textOnBrand)
         Blank()
         Text(this.lastStep > 0 ? `Step ${this.lastStep}` : '—')
           .fontSize(14)
           .fontWeight(FontWeight.Medium)
-          .fontColor('#FFFFFF')
+          .fontColor(Theme.textOnBrand)
           .padding({ left: 12, right: 12, top: 5, bottom: 5 })
-          .backgroundColor('#2F58E0')
+          .backgroundColor(Theme.pillOnBrand)
           .borderRadius(Theme.radiusPill)
       }
       .width('100%')
@@ -1406,16 +1406,16 @@ struct Index {
       Row({ space: 8 }) {
         Text(this.sessionLabel())
           .fontSize(13)
-          .fontColor('#DCE6FF')
+          .fontColor(Theme.textOnBrandDim)
           .layoutWeight(1)
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
         if (this.activeSessionId.length > 0) {
           Text(this.approvals.length > 0 ? '待审批' : '运行中')
             .fontSize(11)
-            .fontColor('#DCE6FF')
+            .fontColor(Theme.textOnBrandDim)
             .padding({ left: 10, right: 10, top: 4, bottom: 4 })
-            .backgroundColor('#2F58E0')
+            .backgroundColor(Theme.pillOnBrand)
             .borderRadius(Theme.radiusPill)
         }
       }
@@ -1452,9 +1452,9 @@ struct Index {
 
   /** A tile with a coloured dot: reads as a status + toggle, not a bare button. */
   @Builder
-  private ActionPill(label: string, active: boolean, accent: string, action: () => void) {
+  private ActionPill(label: string, active: boolean, accent: ResourceColor, action: () => void) {
     Column({ space: 6 }) {
-      Circle({ width: 10, height: 10 }).fill(active ? accent : '#C6D0DE')
+      Circle({ width: 10, height: 10 }).fill(active ? accent : Theme.divider)
       Text(label)
         .fontSize(12)
         .fontWeight(active ? FontWeight.Medium : FontWeight.Normal)
@@ -1525,7 +1525,7 @@ struct Index {
         Text('允许')
           .fontSize(13)
           .fontWeight(FontWeight.Medium)
-          .fontColor('#FFFFFF')
+          .fontColor(Theme.textOnBrand)
           .height(34)
           .padding({ left: 20, right: 20 })
           .backgroundColor(Theme.brand)
@@ -1849,7 +1849,7 @@ struct Index {
         .height('100%')
         .linearGradient({
           angle: 160,
-          colors: [['#F8FAFF', 0.0], ['#EEF2F8', 0.5], ['#E9EEF7', 1.0]]
+          colors: [[Theme.bgTop, 0.0], [Theme.bgMid, 0.5], [Theme.bgBottom, 1.0]]
         })
         .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM])
 
@@ -1943,14 +1943,14 @@ struct Index {
     .padding({ bottom: 14 })
     .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.BOTTOM])
     .backgroundBlurStyle(BlurStyle.COMPONENT_THICK)
-    .backgroundColor('rgba(255,255,255,0.72)')
+    .backgroundColor(Theme.glassStrong)
   }
 
   @Builder
   private BottomItem(label: string, index: number) {
     Column({ space: 3 }) {
       Circle({ width: 6, height: 6 })
-        .fill(this.activeTab === index ? Theme.brand : '#D3DAE5')
+        .fill(this.activeTab === index ? Theme.brand : Theme.divider)
       Text(label)
         .fontSize(11)
         .fontWeight(this.activeTab === index ? FontWeight.Medium : FontWeight.Normal)
@@ -1972,7 +1972,7 @@ struct Index {
       Column()
         .width('100%')
         .height('100%')
-        .backgroundColor('rgba(10,20,40,0.28)')
+        .backgroundColor(Theme.scrim)
         .onClick(() => {
           this.showTools = false;
         })
@@ -2055,7 +2055,7 @@ struct Index {
   }
 
   @Builder
-  private ToolTile(label: string, color: string, action: () => void) {
+  private ToolTile(label: string, color: ResourceColor, action: () => void) {
     Column({ space: 6 }) {
       Text(label)
         .fontSize(13)
@@ -2082,7 +2082,7 @@ struct Index {
     .height(44)
     .padding({ left: Theme.pagePadding, right: Theme.pagePadding })
     .backgroundBlurStyle(BlurStyle.COMPONENT_THIN)
-    .backgroundColor('rgba(255,255,255,0.55)')
+    .backgroundColor(Theme.glass)
   }
 
   @Builder
@@ -2096,7 +2096,7 @@ struct Index {
         .width(20)
         .height(3)
         .radius(2)
-        .fill(this.activeTab === index ? Theme.brand : '#00000000')
+        .fill(this.activeTab === index ? Theme.brand : Color.Transparent)
     }
     .layoutWeight(1)
     .height(44)

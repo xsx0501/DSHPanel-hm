@@ -271,7 +271,7 @@ struct Nodes {
         Text('添加节点')
           .fontSize(15)
           .fontWeight(FontWeight.Medium)
-          .fontColor('#FFFFFF')
+          .fontColor(Theme.textOnBrand)
           .textAlign(TextAlign.Center)
           .height(44)
           .width('100%')

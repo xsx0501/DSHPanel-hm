@@ -2,6 +2,7 @@ import { emitter } from '@kit.BasicServicesKit';
 import { common } from '@kit.AbilityKit';
 import { BusinessError } from '@kit.BasicServicesKit';
 import { CardStateStore } from '../store/CardStateStore';
+import { Theme } from '../theme/Theme';
 
 /**
  * The float view's own ArkUI page (rendered in a separate window/UIContext).
@@ -115,10 +116,10 @@ struct FloatCard {
         Text('DSH')
           .fontSize(12)
           .fontWeight(FontWeight.Bold)
-          .fontColor('#0A59F7')
+          .fontColor(Theme.brand)
         Text(this.status)
           .fontSize(11)
-          .fontColor('#6B7480')
+          .fontColor(Theme.textSecondary)
           .layoutWeight(1)
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
@@ -128,7 +129,7 @@ struct FloatCard {
       // Session title.
       Text(this.title.length > 0 ? this.title : '未选择会话')
         .fontSize(13)
-        .fontColor('#182431')
+        .fontColor(Theme.textPrimary)
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
         .width('100%')
@@ -138,7 +139,7 @@ struct FloatCard {
         Text(this.metrics)
           .fontSize(20)
           .fontWeight(FontWeight.Bold)
-          .fontColor('#182431')
+          .fontColor(Theme.textPrimary)
       }
       .width('100%')
 
@@ -147,23 +148,23 @@ struct FloatCard {
         if (this.tokens.length > 0) {
           Text(this.tokens)
             .fontSize(9)
-            .fontColor('#6B7480')
+            .fontColor(Theme.textSecondary)
             .padding({ left: 6, right: 6, top: 2, bottom: 2 })
-            .backgroundColor('#F1F3F6')
+            .backgroundColor(Theme.cardAlt)
             .borderRadius(5)
         }
         if (this.pending.length > 0) {
           Text(this.pending)
             .fontSize(9)
-            .fontColor('#B26A00')
+            .fontColor(Theme.warning)
             .padding({ left: 6, right: 6, top: 2, bottom: 2 })
-            .backgroundColor('#FFF3E0')
+            .backgroundColor(Theme.warningSoft)
             .borderRadius(5)
         }
         if (this.sessionShort.length > 0) {
           Text('# ' + this.sessionShort)
             .fontSize(9)
-            .fontColor('#9AA3AE')
+            .fontColor(Theme.textTertiary)
             .maxLines(1)
         }
       }
@@ -172,7 +173,7 @@ struct FloatCard {
       if (this.events.length === 0) {
         Text(this.activity.length > 0 ? this.activity : '等待事件…')
           .fontSize(10)
-          .fontColor('#9AA3AE')
+          .fontColor(Theme.textTertiary)
           .maxLines(2)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
           .width('100%')
@@ -185,7 +186,7 @@ struct FloatCard {
             Text(line)
               .fontSize(9)
               .fontFamily('monospace')
-              .fontColor('#7C8797')
+              .fontColor(Theme.textTertiary)
               .maxLines(1)
               .textOverflow({ overflow: TextOverflow.Ellipsis })
               .width('100%')
@@ -193,7 +194,7 @@ struct FloatCard {
         }
         .width('100%')
         .padding(6)
-        .backgroundColor('#FAFBFC')
+        .backgroundColor(Theme.cardAlt)
         .borderRadius(6)
       }
 
@@ -202,21 +203,21 @@ struct FloatCard {
         Text(this.preview.length > 0 ? this.preview : '等待审批')
           .fontSize(10)
           .fontFamily('monospace')
-          .fontColor('#182431')
+          .fontColor(Theme.textPrimary)
           .maxLines(2)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
           .width('100%')
           .padding(6)
-          .backgroundColor('#F7F8FA')
+          .backgroundColor(Theme.cardAlt)
           .borderRadius(6)
         Row({ space: 8 }) {
           Text('拒绝')
             .fontSize(13)
-            .fontColor('#D93A2B')
+            .fontColor(Theme.danger)
             .textAlign(TextAlign.Center)
             .height(32)
             .layoutWeight(1)
-            .backgroundColor('#FEECEA')
+            .backgroundColor(Theme.dangerSoft)
             .borderRadius(8)
             .onClick(() => {
               this.emit(EVENT_DECISION, this.approvalId, 'REJECT');
@@ -224,11 +225,11 @@ struct FloatCard {
           Text('允许')
             .fontSize(13)
             .fontWeight(FontWeight.Medium)
-            .fontColor('#FFFFFF')
+            .fontColor(Theme.textOnBrand)
             .textAlign(TextAlign.Center)
             .height(32)
             .layoutWeight(1)
-            .backgroundColor('#0A59F7')
+            .backgroundColor(Theme.brand)
             .borderRadius(8)
             .onClick(() => {
               this.emit(EVENT_DECISION, this.approvalId, 'APPROVE');
@@ -241,6 +242,6 @@ struct FloatCard {
     .width('100%')
     .alignItems(HorizontalAlign.Start)
     .justifyContent(FlexAlign.Center)
-    .backgroundColor('#FFFFFF')
+    .backgroundColor(Theme.card)
   }
 }

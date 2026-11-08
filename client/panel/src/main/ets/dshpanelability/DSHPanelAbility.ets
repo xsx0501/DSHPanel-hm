@@ -1,4 +1,4 @@
-import { AbilityConstant, ConfigurationConstant, UIAbility, Want } from '@kit.AbilityKit';
+import { AbilityConstant, Configuration, ConfigurationConstant, UIAbility, Want } from '@kit.AbilityKit';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { window } from '@kit.ArkUI';
 
@@ -39,6 +39,29 @@ export default class DSHPanelAbility extends UIAbility {
     hilog.info(DOMAIN, 'testTag', '%{public}s', 'Ability onDestroy');
   }
 
+  /** Dark mode flips the bar glyphs; the bars themselves stay transparent. */
+  private applySystemBars(colorMode: ConfigurationConstant.ColorMode | undefined): void {
+    const dark: boolean = colorMode === ConfigurationConstant.ColorMode.COLOR_MODE_DARK;
+    const content: string = dark ? '#F2F4F7' : '#182431';
+    try {
+      window.getLastWindow(this.context).then((mainWindow: window.Window) => {
+        mainWindow.setWindowSystemBarProperties({
+          statusBarColor: '#00000000',
+          statusBarContentColor: content,
+          navigationBarColor: '#00000000',
+          navigationBarContentColor: content
+        }).catch(() => {});
+        mainWindow.setWindowBackgroundColor(dark ? '#000000' : '#F2F3F5');
+      }).catch(() => {});
+    } catch (err) {
+      hilog.error(DOMAIN, 'testTag', 'Failed to style system bars: %{public}s', JSON.stringify(err));
+    }
+  }
+
+  /** System light/dark switched while the app is alive. */
+  onConfigurationUpdate(newConfig: Configuration): void {
+    this.applySystemBars(newConfig.colorMode);
+  }
   onWindowStageCreate(windowStage: window.WindowStage): void {
     // Main window is created, set main page for this ability
     hilog.info(DOMAIN, 'testTag', '%{public}s', 'Ability onWindowStageCreate');
@@ -56,23 +79,14 @@ export default class DSHPanelAbility extends UIAbility {
     try {
       windowStage.getMainWindow().then((mainWindow: window.Window) => {
         mainWindow.setWindowLayoutFullScreen(true).catch(() => {});
-        mainWindow.setWindowSystemBarProperties({
-          statusBarColor: '#00000000',
-          statusBarContentColor: '#182431',
-          navigationBarColor: '#00000000',
-          navigationBarContentColor: '#182431'
-        }).catch(() => {});
-        mainWindow.setWindowBackgroundColor('#F2F3F5');
       }).catch(() => {});
     } catch (err) {
       hilog.error(DOMAIN, 'testTag', 'Failed to style system bars: %{public}s', JSON.stringify(err));
     }
 
-    try {
-      this.context.getApplicationContext().setColorMode(ConfigurationConstant.ColorMode.COLOR_MODE_LIGHT);
-    } catch (err) {
-      hilog.error(DOMAIN, 'testTag', 'Failed to set colorMode. Cause: %{public}s', JSON.stringify(err));
-    }
+    // No forced colour mode: every surface is resource-tokenised, so the app follows
+    // the system light/dark setting. Only the bar glyph colour needs flipping here.
+    this.applySystemBars(this.context.config.colorMode);
   }
 
   onWindowStageDestroy(): void {
