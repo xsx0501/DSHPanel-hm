@@ -1,16 +1,13 @@
 name: release-hap
 
-# Tagging `v*` builds a HAP, the same way an Android project builds an APK on a tag.
+# Tagging `v*` builds an UNSIGNED HAP, the same way an Android project builds an
+# APK on a tag. Signing stays local: the .p7b profile is bound to one Huawei
+# developer account, bundleName and device whitelist, so CI cannot mint one.
 on:
   push:
     tags:
       - 'v*'
   workflow_dispatch:
-    inputs:
-      signing:
-        description: 'Sign the HAP with the secrets, otherwise upload an unsigned one'
-        type: boolean
-        default: false
 
 permissions:
   contents: write
@@ -33,9 +30,9 @@ jobs:
       - name: Install build dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y libgl1-mesa-dev openjdk-17-jre-headless
+          sudo apt-get install -y libgl1-mesa-dev
 
-      - name: Build HAP
+      - name: Build unsigned HAP
         working-directory: client
         env:
           DEVECO_SDK_HOME: ${{ env.HOS_SDK_HOME }}
@@ -48,70 +45,35 @@ jobs:
             assembleHap --no-daemon
           ls -l panel/build/default/outputs/default/
 
-      # Optional: only runs when the signing material is present in the repo secrets.
-      # Signing a HAP needs a profile issued for *your* Huawei developer account and
-      # bundleName, so CI can never mint one on its own.
-      - name: Sign HAP
-        id: sign
-        if: ${{ inputs.signing || secrets.SIGN_KEYSTORE_BASE64 != '' }}
-        env:
-          SIGN_KEYSTORE_BASE64: ${{ secrets.SIGN_KEYSTORE_BASE64 }}
-          SIGN_KEYSTORE_PWD: ${{ secrets.SIGN_KEYSTORE_PWD }}
-          SIGN_KEY_ALIAS: ${{ secrets.SIGN_KEY_ALIAS }}
-          SIGN_KEY_PWD: ${{ secrets.SIGN_KEY_PWD }}
-          SIGN_PROFILE_BASE64: ${{ secrets.SIGN_PROFILE_BASE64 }}
-          SIGN_CERT_BASE64: ${{ secrets.SIGN_CERT_BASE64 }}
-        run: |
-          set -euo pipefail
-          work="$RUNNER_TEMP/sign"
-          mkdir -p "$work"
-          echo "$SIGN_KEYSTORE_BASE64" | base64 -d > "$work/keystore.p12"
-          echo "$SIGN_PROFILE_BASE64" | base64 -d > "$work/profile.p7b"
-          echo "$SIGN_CERT_BASE64"   | base64 -d > "$work/cert.pem"
-          tool="$(find "$HOS_SDK_HOME" -name hap-sign-tool.jar | head -1)"
-          echo "sign tool: $tool"
-          in_hap="$(ls client/panel/build/default/outputs/default/*.hap | head -1)"
-          java -jar "$tool" sign-app \
-            -mode localSign \
-            -keyAlias "$SIGN_KEY_ALIAS" \
-            -signAlg SHA256withECDSA \
-            -appCertFile "$work/cert.pem" \
-            -profileFile "$work/profile.p7b" \
-            -inFile "$in_hap" \
-            -keystoreFile "$work/keystore.p12" \
-            -outFile "$RUNNER_TEMP/panel-signed.hap" \
-            -keyPwd "$SIGN_KEY_PWD" \
-            -keystorePwd "$SIGN_KEYSTORE_PWD"
-          echo "hap=$RUNNER_TEMP/panel-signed.hap" >> "$GITHUB_OUTPUT"
-
-      - name: Collect artefact
+      - name: Name the artefact
         id: collect
         run: |
           set -euo pipefail
-          if [ -f "$RUNNER_TEMP/panel-signed.hap" ]; then
-            cp "$RUNNER_TEMP/panel-signed.hap" panel.hap
-            echo "signed=true" >> "$GITHUB_OUTPUT"
-          else
-            cp "$(ls client/panel/build/default/outputs/default/*.hap | head -1)" panel.hap
-            echo "signed=false" >> "$GITHUB_OUTPUT"
-          fi
-          ls -l panel.hap
+          src="$(ls client/panel/build/default/outputs/default/*.hap | head -1)"
+          case "$GITHUB_REF_NAME" in
+            v*) out="DSHPanel-${GITHUB_REF_NAME}-unsigned.hap" ;;
+            *)  out="DSHPanel-unsigned.hap" ;;
+          esac
+          cp "$src" "$out"
+          echo "file=$out" >> "$GITHUB_OUTPUT"
+          ls -l "$out"
 
       - uses: actions/upload-artifact@v4
         with:
-          name: panel-hap
-          path: panel.hap
+          name: dshpanel-hap
+          path: ${{ steps.collect.outputs.file }}
           if-no-files-found: error
 
       - name: Attach to the release
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
-          files: panel.hap
+          files: ${{ steps.collect.outputs.file }}
           name: ${{ github.ref_name }}
           generate_release_notes: true
           body: |
-            HAP built from `${{ github.sha }}`.
+            **未签名 HAP**，由 tag `${{ github.ref_name }}` 构建（`${{ github.sha }}`）。
 
-            - 未签名版本需要自己用 DevEco / `hap-sign-tool` 签名后才能安装
-            - 签名版本需要仓库 secrets 里的签名材料（见 README）
+            安装前需要本地签名：用 DevEco Studio 的 *Build > Generate Key and CSR* /
+            *Project Structure > Signing Configs* 配好签名后，直接对源码签名构建，
+            或对这里下载的 HAP 用 `hap-sign-tool` 重签。

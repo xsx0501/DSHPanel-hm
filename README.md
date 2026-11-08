@@ -110,7 +110,7 @@ MIT
 二次设计作品依 **CC BY-NC-SA 4.0** 授权：非商业使用，二创需遵循相同协议。本项目为个人非商业工具，图标仅用于客户端标识；如原权利人提出异议，会立即替换。
 ## 自动出包（GitHub Actions）
 
-推一个 `v*` tag 就会构建 HAP，和 Android 项目打 tag 出 APK 一个意思：
+推一个 `v*` tag 就会构建 **未签名 HAP**，和 Android 项目打 tag 出 APK 一个意思：
 
 ```bash
 git tag v0.2.0
@@ -119,28 +119,14 @@ git push origin v0.2.0
 
 工作流：`.github/workflows/release-hap.yml`
 
-1. `ErBWs/setup-ohos@v2` 安装 HarmonyOS 命令行工具（hvigorw + SDK），按 `HOS_CLI_VERSION` 选版本
+1. `ErBWs/setup-ohos@v2` 安装 HarmonyOS 命令行工具（hvigorw + SDK）
 2. `hvigorw --mode module -p product=default -p module=panel@default -p buildMode=release assembleHap`
-3. 产物上传为 artifact，并附到对应 GitHub Release
+3. 产物改名 `DSHPanel-<tag>-unsigned.hap`，上传 artifact 并附到对应 GitHub Release
 
-### 签名
+## 为什么只出未签名包
 
-CI **默认只出未签名 HAP**：HAP 的签名 profile 必须是绑定你华为开发者账号 + bundleName 的，CI 没法自己生成。
+HAP 的签名 profile（`.p7b`）绑定**你的华为开发者账号、bundleName 和设备白名单**，CI 无法代生成。
+把签名材料塞进仓库 secrets 也意味着把调试私钥托管给 GitHub，不值得。
 
-想让它出可直接安装的包，在仓库 secrets 里放签名材料（都是 base64）：
-
-| Secret | 内容 |
-| --- | --- |
-| `SIGN_KEYSTORE_BASE64` | `.p12` 密钥库 |
-| `SIGN_KEYSTORE_PWD` | 密钥库口令 |
-| `SIGN_KEY_ALIAS` | 密钥别名 |
-| `SIGN_KEY_PWD` | 密钥口令 |
-| `SIGN_PROFILE_BASE64` | `.p7b` 签名 profile |
-| `SIGN_CERT_BASE64` | `.cer` 证书链 |
-
-有这些 secret 时，工作流会用 SDK 自带的 `hap-sign-tool.jar` 走 `localSign` 签一遍。
-
-### 注意
-
-- 命令行工具必须包含你 `compileSdkVersion` 对应的 SDK（这里是 API 26）；如果公开的最新版还没跟上，把 `version` 钉到你本地 DevEco 的 CLI 版本
-- 未签名的 HAP 装不上设备，需要本地用 DevEco 签一次
+安装步骤：下载 HAP 后，用 DevEco Studio 打开 `client/` 配好签名（*Project Structure → Signing Configs*），
+签名构建一次即可装到设备；或者用 SDK 里的 `hap-sign-tool` 对下载的 HAP 重签。
