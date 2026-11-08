@@ -1,5 +1,5 @@
 import { common, wantAgent, Want } from '@kit.AbilityKit';
-import { window } from '@kit.ArkUI';
+import { window, uiMaterial } from '@kit.ArkUI';
 import { BusinessError } from '@kit.BasicServicesKit';
 import { ImportIntent, NodeInfo, PanelEvent, PanelEventPayload, PendingApproval, SessionSummary, SnapshotProgress, SnapshotResponse } from '../model/PanelTypes';
 import { PanelApi } from '../net/PanelApi';
@@ -2094,9 +2094,14 @@ struct Index {
       }
       .width('100%')
       .padding({ left: 18, right: 18, top: 18, bottom: 30 })
-      .backgroundColor(Theme.card)
       .borderRadius({ topLeft: 22, topRight: 22 })
-      .shadow({ radius: 24, color: '#22000000', offsetX: 0, offsetY: -6 })
+      // Immersive system material: the sheet covers the page, so the filter has real
+      // content behind it to refract (unlike a separate float window).
+      .systemMaterial(new uiMaterial.ImmersiveMaterial({
+        style: uiMaterial.ImmersiveStyle.REGULAR,
+        interactive: true,
+        lightEffect: { color: Theme.brand }
+      }))
     }
     .width('100%')
     .height('100%')

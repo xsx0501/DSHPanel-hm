@@ -1,6 +1,6 @@
 import { emitter } from '@kit.BasicServicesKit';
 import { common } from '@kit.AbilityKit';
-import { window } from '@kit.ArkUI';
+import { window, uiMaterial } from '@kit.ArkUI';
 import { CardStateStore } from '../store/CardStateStore';
 import { Theme } from '../theme/Theme';
 
@@ -43,6 +43,11 @@ struct FloatCard {
   aboutToAppear(): void {
     this.refresh();
     this.measure();
+    // The window surface must be transparent, otherwise the immersive material has
+    // nothing to refract and falls back to a flat sheet.
+    window.getLastWindow(getContext(this)).then((win: window.Window) => {
+      win.setWindowBackgroundColor('#00000000');
+    }).catch(() => {});
     // The main window is usually in the background while this window is visible,
     // so pull the state ourselves instead of waiting for a push.
     this.pollTimer = setInterval(() => {
@@ -136,11 +141,13 @@ struct FloatCard {
     .width('100%')
     .height('100%')
     .justifyContent(FlexAlign.Center)
-    .backgroundColor(Theme.glass)
-    .backgroundBlurStyle(BlurStyle.COMPONENT_THICK)
     .borderRadius(26)
-    .border({ width: 1, color: Theme.border })
-    .shadow({ radius: 18, color: '#33000000', offsetX: 0, offsetY: 6 })
+    .systemMaterial(new uiMaterial.ImmersiveMaterial({
+      style: uiMaterial.ImmersiveStyle.REGULAR,
+      interactive: true,
+      applyShadow: true,
+      lightEffect: { color: Theme.brand }
+    }))
     .onClick(() => {
       this.emit(EVENT_RESIZE, '', 'expand');
     })
@@ -271,11 +278,13 @@ struct FloatCard {
     .width('100%')
     .height('100%')
     .alignItems(HorizontalAlign.Start)
-    .backgroundColor(Theme.glass)
-    .backgroundBlurStyle(BlurStyle.COMPONENT_THICK)
     .borderRadius(22)
-    .border({ width: 1, color: Theme.border })
-    .shadow({ radius: 22, color: '#33000000', offsetX: 0, offsetY: 8 })
+    .systemMaterial(new uiMaterial.ImmersiveMaterial({
+      style: uiMaterial.ImmersiveStyle.THIN,
+      interactive: true,
+      applyShadow: true,
+      lightEffect: { color: Theme.brand }
+    }))
   }
 
   build() {
