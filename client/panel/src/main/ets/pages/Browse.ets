@@ -28,6 +28,8 @@ struct Browse {
   @State private status: string = '准备中…';
   @State private ready: boolean = false;
   @State private target: string = '';
+  /** Immersive mode: our own chrome (title bar) is hidden, the page owns the screen. */
+  @State private immersive: boolean = false;
 
   aboutToAppear(): void {
     const context: common.UIAbilityContext = getContext(this) as common.UIAbilityContext;
@@ -100,6 +102,7 @@ struct Browse {
       Column() {
       // Compact, frosted chrome: the page itself is the product, so the bar never
       // competes with it (no chunky filled buttons).
+      if (!this.immersive) {
       Row({ space: 10 }) {
         Text('‹')
           .fontSize(26)
@@ -143,13 +146,28 @@ struct Browse {
               this.status = `刷新失败 ${businessError.code}`;
             }
           })
+
+        // Fullscreen: drop the whole bar and let the page use the reclaimed space.
+        Text('⤢')
+          .fontSize(16)
+          .fontColor('#182431')
+          .width(34)
+          .height(34)
+          .textAlign(TextAlign.Center)
+          .borderRadius(17)
+          .backgroundColor('rgba(255,255,255,0.7)')
+          .onClick(() => {
+            this.immersive = true;
+          })
       }
       .width('100%')
       .padding({ left: 12, right: 12, top: 8, bottom: 8 })
       .backgroundBlurStyle(BlurStyle.COMPONENT_THIN)
       .backgroundColor('rgba(255,255,255,0.55)')
+      }
 
       if (this.ready) {
+        Stack({ alignContent: Alignment.TopEnd }) {
         Web({ src: this.target, controller: this.controller })
           .javaScriptAccess(true)
           .domStorageAccess(true)
@@ -194,7 +212,27 @@ struct Browse {
             this.status = `加载失败：${event.error.getErrorInfo()}`;
           })
           .width('100%')
-          .layoutWeight(1)
+          .height('100%')
+
+          // Only shown in immersive mode: a small ghost handle that brings the
+          // chrome back, so hiding the bar never traps the user.
+          if (this.immersive) {
+            Text('⤡')
+              .fontSize(14)
+              .fontColor('#FFFFFF')
+              .width(30)
+              .height(30)
+              .textAlign(TextAlign.Center)
+              .borderRadius(15)
+              .backgroundColor('rgba(24,36,49,0.42)')
+              .margin({ top: 10, right: 10 })
+              .onClick(() => {
+                this.immersive = false;
+              })
+          }
+        }
+        .width('100%')
+        .layoutWeight(1)
       } else {
         Text(this.status)
           .fontSize(13)
