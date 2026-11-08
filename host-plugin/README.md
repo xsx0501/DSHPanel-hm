@@ -159,6 +159,8 @@ http://127.0.0.1:3080/panel       # 宿主机本机
 dsh-panel-bridge enable --profile web --public-url https://<你的域名> --inject
 ```
 
+注入的图标会插进左侧图标栏末尾（与 DSH 自己的导航并排）；找不到侧栏时退化为「屏幕左侧、输入框上方」的悬浮图标，不会盖住发送按钮。
+
 （原理：订阅 `webserver/index-inject`，往 index.html 注入一段脚本。注意必须用 `ctx.on(...)` 订阅——事件是在 webServer 自己的 context 上 emit 的，`ctx.webServer.on(...)` 收不到。）
 
 想让页面上显示公网地址（而不是 127.0.0.1），在挂载时给一次：
