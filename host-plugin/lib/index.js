@@ -729,7 +729,8 @@ export function apply(ctx, config = {}) {
   // config flag until the exact row kinds are confirmed on the target build.
   if (config.injectBridge === true) {
     try {
-      ctx.webServer.on('webserver/index-inject', (table) => {
+      // The web server emits this on its own context; a plugin subscribes via ctx.on.
+      ctx.on('webserver/index-inject', (table) => {
         if (!Array.isArray(table)) return
         table.push({ kind: 'script', text: bridgeScript() })
       })

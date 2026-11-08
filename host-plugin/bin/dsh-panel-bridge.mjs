@@ -39,7 +39,7 @@ function stripBlock(text) {
   return text.replace(/\n- insert:\n(?:[ \t].*\n)*?[ \t]+- id: panel-bridge[^\n]*\n(?:[ \t].*\n)*/g, '\n')
 }
 
-function mountBlock(publicUrl) {
+function mountBlock(publicUrl, inject) {
   const urlLine = publicUrl === '' ? '' : `        publicUrl: '${publicUrl}'\n`
   return `${MARK} (panel-bridge)
 # Managed by \`${PACKAGE}\` — npm install + this stanza is all it needs.
@@ -49,7 +49,7 @@ function mountBlock(publicUrl) {
       config:
 ${urlLine}        approvalTimeoutMs: 120000
         takeOverApprovals: true
-        injectBridge: false
+        injectBridge: ${inject ? 'true' : 'false'}
 `
 }
 
@@ -66,7 +66,8 @@ function validate() {
 function enable() {
   if (!existsSync(patchPath)) throw new Error(`profile patch not found: ${patchPath}`)
   const publicUrl = option('public-url', '').replace(/\/+$/, '')
-  const next = stripBlock(readFileSync(patchPath, 'utf8')) + '\n' + mountBlock(publicUrl)
+  const inject = args.includes('--inject')
+  const next = stripBlock(readFileSync(patchPath, 'utf8')) + '\n' + mountBlock(publicUrl, inject)
   writeFileSync(patchPath, next)
   console.log(`mounted ${PACKAGE} in profile "${profile}"`)
   const check = validate()
@@ -128,7 +129,7 @@ async function qr() {
 function help() {
   console.log(`dsh-panel-bridge — DSH host plugin for the HarmonyOS panel client
 
-  dsh-panel-bridge enable [--profile web] [--public-url https://host]   mount + validate
+  dsh-panel-bridge enable [--profile web] [--public-url https://host] [--inject]   mount + validate
   dsh-panel-bridge disable [--profile web]    remove the mount stanza
   dsh-panel-bridge status [--port 3080]       print the loopback diag
   dsh-panel-bridge qr [--url …] [--svg out.svg]   pairing deep link + QR

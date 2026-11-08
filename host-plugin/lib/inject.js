@@ -27,5 +27,33 @@ export function bridgeScript() {
       try { window.harmonyPanelBridge && window.harmonyPanelBridge.onHint(JSON.stringify(hint)); } catch (_) {}
     }
   };
+
+  // Pairing entry point: a small floating button that opens the server-rendered
+  // /panel card (QR + deep link). It carries no credentials itself.
+  function mountPairButton() {
+    if (document.getElementById('dsh-panel-pair')) return;
+    var a = document.createElement('a');
+    a.id = 'dsh-panel-pair';
+    a.href = '/panel';
+    a.target = '_blank';
+    a.rel = 'noopener';
+    a.title = 'DSH 面板配对：扫码把手机连上';
+    a.textContent = '配对';
+    a.style.cssText = [
+      'position:fixed', 'right:16px', 'bottom:16px', 'z-index:2147483000',
+      'padding:8px 14px', 'border-radius:999px', 'background:#0a59f7', 'color:#fff',
+      'font:500 13px/1.2 -apple-system,"HarmonyOS Sans","PingFang SC",system-ui,sans-serif',
+      'text-decoration:none', 'box-shadow:0 6px 18px rgba(10,89,247,.35)', 'opacity:.92'
+    ].join(';');
+    a.onmouseenter = function () { a.style.opacity = '1'; };
+    a.onmouseleave = function () { a.style.opacity = '.92'; };
+    document.body.appendChild(a);
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', mountPairButton);
+  } else {
+    mountPairButton();
+  }
 })();`
 }

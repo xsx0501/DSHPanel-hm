@@ -153,6 +153,14 @@ http://127.0.0.1:3080/panel       # 宿主机本机
 
 访问控制：**loopback 直连**，或**带着 DSH 自己的登录 cookie**（会先向本机 `/` 校验一次）。页面里是活 token，所以对匿名访问一律 403。
 
+不想记 URL 的话，让插件在网页右下角放一个「配对」按钮：
+
+```bash
+dsh-panel-bridge enable --profile web --public-url https://<你的域名> --inject
+```
+
+（原理：订阅 `webserver/index-inject`，往 index.html 注入一段脚本。注意必须用 `ctx.on(...)` 订阅——事件是在 webServer 自己的 context 上 emit 的，`ctx.webServer.on(...)` 收不到。）
+
 想让页面上显示公网地址（而不是 127.0.0.1），在挂载时给一次：
 
 ```bash
