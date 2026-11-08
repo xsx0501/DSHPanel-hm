@@ -128,6 +128,8 @@ struct Index {
   private swiperController: SwiperController = new SwiperController();
   /** Status-bar height, so the frosted header sits below it while the backdrop runs under it. */
   @State private topInset: number = 38;
+  /** Mirrors the system colour mode so the floating ball can re-theme itself. */
+  @StorageLink('panel.dark') @Watch('onDarkModeChanged') private darkMode: boolean = false;
   @State private rememberIds: string[] = [];
   @State private tick: number = 0;
   private tickTimer: number = -1;
@@ -194,6 +196,9 @@ struct Index {
     this.startBackgroundPoll();
     // Background presence is the point of this app: show the ball automatically
     // unless the user explicitly turned it off.
+    if (this.ball !== null) {
+      this.ball.setDark(this.darkMode);
+    }
     if (!this.ballUserStopped && !this.ballVisible && this.ball !== null && this.ball.isSupported()) {
       this.toggleBall();
     }
@@ -590,6 +595,15 @@ struct Index {
     }
   }
 
+  private onDarkModeChanged(): void {
+    if (this.ball === null) {
+      return;
+    }
+    this.ball.setDark(this.darkMode);
+    if (this.ballVisible) {
+      this.ball.show(this.ballTitleLine(), this.ballContentLine());
+    }
+  }
   private async toggleBall(): Promise<void> {
     if (this.ball === null) {
       return;
@@ -1015,7 +1029,10 @@ struct Index {
       }
       // Auto ball: it has to be created while the window is still visible,
       // otherwise the system rejects the float window (1300020 / err 1017).
-      if (!this.ballUserStopped && !this.ballVisible && this.ball !== null && this.ball.isSupported()) {
+      if (this.ball !== null) {
+      this.ball.setDark(this.darkMode);
+    }
+    if (!this.ballUserStopped && !this.ballVisible && this.ball !== null && this.ball.isSupported()) {
         // Bind the pair BEFORE either starts so the system can expand the card on tap.
         let bound: boolean = false;
         if (this.floatView !== null && FloatViewPresenter.isSupported()) {

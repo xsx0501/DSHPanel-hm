@@ -15,6 +15,8 @@ export class FloatingBallPresenter {
   private controller: floatingBall.FloatingBallController | null = null;
   private running: boolean = false;
   private clickHandler: (() => void) | null = null;
+  /** Follows the system colour mode: the ball is a translucent surface, not a badge. */
+  private dark: boolean = false;
 
   constructor(context: common.UIAbilityContext) {
     this.context = context;
@@ -26,6 +28,10 @@ export class FloatingBallPresenter {
     } catch {
       return false;
     }
+  }
+
+  setDark(dark: boolean): void {
+    this.dark = dark;
   }
 
   /** Two-line content: `title` is the big line, `content` the small one. */
@@ -114,14 +120,25 @@ export class FloatingBallPresenter {
   params(title: string, content: string): floatingBall.FloatingBallParams {
     const safeTitle: string = title.length > 16 ? `${title.substring(0, 15)}…` : title;
     const safeContent: string = content.length > 22 ? `${content.substring(0, 21)}…` : content;
-    return {
-      template: floatingBall.FloatingBallTemplate.EMPHATIC,
-      title: safeTitle,
-      content: safeContent,
-      backgroundColor: '#0A59F7',
-      titleColor: '#FFFFFF',
-      contentColor: '#D8E6FF'
-    };
+    // 沉浸光感: a translucent surface that follows the system mode. The system
+    // template has no blur, so the alpha is what lets the wallpaper show through.
+    return this.dark
+      ? {
+        template: floatingBall.FloatingBallTemplate.EMPHATIC,
+        title: safeTitle,
+        content: safeContent,
+        backgroundColor: '#2C333D',
+        titleColor: '#8FB6FF',
+        contentColor: '#B8C2CE'
+      }
+      : {
+        template: floatingBall.FloatingBallTemplate.EMPHATIC,
+        title: safeTitle,
+        content: safeContent,
+        backgroundColor: '#FFFFFF',
+        titleColor: '#0A59F7',
+        contentColor: '#6B7480'
+      };
   }
 
   isRunning(): boolean {

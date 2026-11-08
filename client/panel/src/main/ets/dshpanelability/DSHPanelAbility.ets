@@ -42,6 +42,8 @@ export default class DSHPanelAbility extends UIAbility {
   /** Dark mode flips the bar glyphs; the bars themselves stay transparent. */
   private applySystemBars(colorMode: ConfigurationConstant.ColorMode | undefined): void {
     const dark: boolean = colorMode === ConfigurationConstant.ColorMode.COLOR_MODE_DARK;
+    // Pages and presenters read this to re-theme the floating ball and cards.
+    AppStorage.setOrCreate<boolean>('panel.dark', dark);
     const content: string = dark ? '#F2F4F7' : '#182431';
     try {
       window.getLastWindow(this.context).then((mainWindow: window.Window) => {
