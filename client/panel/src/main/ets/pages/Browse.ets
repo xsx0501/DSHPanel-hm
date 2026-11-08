@@ -3,6 +3,7 @@ import { router } from '@kit.ArkUI';
 import { webview } from '@kit.ArkWeb';
 import { window } from '@kit.ArkUI';
 import { BusinessError } from '@kit.BasicServicesKit';
+import { hilog } from '@kit.PerformanceAnalysisKit';
 import { PanelStore } from '../store/PanelStore';
 import { PanelApi } from '../net/PanelApi';
 import { PanelWebBridge } from '../web/PanelWebBridge';
@@ -32,6 +33,8 @@ struct Browse {
   @State private target: string = '';
   /** The page always owns the screen; the flag is kept for future chrome toggles. */
   @State private immersive: boolean = true;
+  /** Pull-to-refresh state for the container (ArkWeb has no built-in overscroll). */
+  @State private refreshing: boolean = false;
 
   aboutToAppear(): void {
     const context: common.UIAbilityContext = getContext(this) as common.UIAbilityContext;
@@ -126,7 +129,9 @@ struct Browse {
 
       Column() {
       if (this.ready) {
-        Stack({ alignContent: Alignment.TopEnd }) {
+        // Pull down anywhere the page itself does not scroll (e.g. the left sidebar)
+        // to reload — verified on device; no overlay button needed.
+        Refresh({ refreshing: $$this.refreshing }) {
         Web({ src: this.target, controller: this.controller })
           // Let the page see prefers-color-scheme from the system, and force a dark
           // rendering when the page ships no dark styles of its own.
@@ -177,8 +182,20 @@ struct Browse {
           .width('100%')
           .height('100%')
         }
+        .onRefreshing(() => {
+          hilog.info(0x0001, 'panel', 'pull-to-refresh triggered');
+          try {
+            this.controller.refresh();
+          } catch (error) {
+            const businessError: BusinessError = error as BusinessError;
+            hilog.error(0x0001, 'panel', 'refresh failed %{public}d', businessError.code);
+          }
+          setTimeout(() => {
+            this.refreshing = false;
+          }, 1200);
+        })
         .width('100%')
-        .layoutWeight(1)
+        .height('100%')
       } else {
         Text(this.status)
           .fontSize(13)
