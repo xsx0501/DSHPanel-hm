@@ -23,14 +23,17 @@ dsh --version             # 期望 DSH >= 0.2.1
 ```
 
 ```bash
-# 步骤 2：把插件装进 profile（git 直装；已发布到 npm 时可用包名，见下）
-dsh plugin --profile web add github:xsx0501/DSHPanel-hm
-# 期望：输出 "+ dsh-panel-bridge ..."；出现 "declares no dsh.bundle" 属正常
+# 步骤 2：把插件装进 profile
+dsh plugin --profile web add https://github.com/xsx0501/DSHPanel-hm.git
+# 期望：输出 "+ dsh-panel-bridge 0.2.0" 和 "Done in Ns"
+# 说明：HTTPS 形式在只开 443 的机器上也能装；SSH 可用时 github:xsx0501/DSHPanel-hm 等价
 ```
 
 ```bash
 # 步骤 3：挂载（写 loader 记录 + 校验 profile）
 dsh-panel-bridge enable
+# 若提示 command not found（bin 没进 PATH），用：
+#   ./node_modules/.bin/dsh-panel-bridge enable --profile web
 # 期望：
 #   mounted dsh-panel-bridge in profile "web"
 #   config OK (NNNN lines)
@@ -65,9 +68,12 @@ dsh-panel-bridge qr --url https://<你的公网域名> --svg /tmp/pair.svg
 ### A. 从 git（推荐，无需 npm 账号）
 
 ```bash
-dsh plugin --profile web add github:xsx0501/DSHPanel-hm
+dsh plugin --profile web add https://github.com/xsx0501/DSHPanel-hm.git
 dsh-panel-bridge enable
 ```
+
+SSH 能通（`ssh -T git@github.com` 有回应）时也可以用短写 `github:xsx0501/DSHPanel-hm`。
+只开了 443 的机器请用上面的 HTTPS 形式——**实测**在 Termux/proot 主机上 19 秒装完。
 
 ### B. 从 npm（若已发布）
 
