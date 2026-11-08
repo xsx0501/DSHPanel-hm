@@ -338,6 +338,24 @@ export function apply(ctx, config = {}) {
 </body></html>`
   }
 
+  // ---- pairing data for the in-app panel (the client nav entry fetches this) ----
+  ctx.webServer.register({
+    path: `${PANEL_PREFIX}/pairing`,
+    exact: true,
+    handler: async (req, res) => {
+      if (!isLoopback(req) && !(await hasDshSession(req))) {
+        writeJson(res, 403, { ok: false, code: 'FORBIDDEN' })
+        return
+      }
+      const origin = resolveOrigin(req)
+      const deepLink = launchDeepLink(origin)
+      const qrUrl = deepLink === ''
+        ? ''
+        : `${PANEL_PREFIX}/qr?format=png&data=${encodeURIComponent(deepLink)}`
+      writeJson(res, 200, { ok: deepLink !== '', endpoint: origin, deepLink, qrUrl })
+    }
+  })
+
   ctx.webServer.register({
     path: PAIR_PAGE_PATH,
     exact: true,
@@ -723,11 +741,10 @@ export function apply(ctx, config = {}) {
     }
   })
 
-  // ---- WebView bridge injection (optional; J5 pins the row shape) ----
-  // DSH 0.2.1 emits `webserver/index-inject` with the injection table only, and
-  // rows are `{ kind, name, value }` / `{ kind: 'script', ... }`. Kept behind a
-  // config flag until the exact row kinds are confirmed on the target build.
-  if (config.injectBridge === true) {
+  // ---- WebView bridge injection (legacy) ----
+  // Superseded by the real client module (`./client` → sidebar.panellist), so the
+  // rail-pinning DOM hack stays off unless someone explicitly opts back in.
+  if (config.injectBridge === 'legacy') {
     try {
       // The web server emits this on its own context; a plugin subscribes via ctx.on.
       ctx.on('webserver/index-inject', (table) => {

@@ -262,3 +262,12 @@ pair-qr.sh                 早期二维码脚本（等价于 CLI 的 qr）
 ## License
 
 MIT
+## 客户端内原生入口（推荐）
+
+插件自带一个 DSH **client module**（`lib/client.js`），不使用 DOM 注入：
+
+- 在左侧图标栏注册一个「配对」面板入口（`sidebar.panellist`）
+- 点击后主栏显示配对页：二维码、节点地址、一键复制 deep link、刷新
+- 二维码数据来自 `GET /api/panel/pairing`（仅回环地址或已登录 DSH 的浏览器可访问）
+
+旧的 `injectBridge` 注入方式已降级为 `injectBridge: 'legacy'`，默认不再启用。
