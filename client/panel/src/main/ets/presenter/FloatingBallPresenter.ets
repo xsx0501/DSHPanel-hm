@@ -1,5 +1,6 @@
 import { floatingBall } from '@kit.ArkUI';
 import { common } from '@kit.AbilityKit';
+import { image } from '@kit.ImageKit';
 import { BusinessError } from '@kit.BasicServicesKit';
 
 /**
@@ -17,6 +18,8 @@ export class FloatingBallPresenter {
   private clickHandler: (() => void) | null = null;
   /** Follows the system colour mode: the ball is a translucent surface, not a badge. */
   private dark: boolean = false;
+  /** Pre-rendered frosted tile: the template draws a picture, not live blur. */
+  private icon: image.PixelMap | null = null;
 
   constructor(context: common.UIAbilityContext) {
     this.context = context;
@@ -30,6 +33,33 @@ export class FloatingBallPresenter {
     }
   }
 
+  private async loadIcon(): Promise<image.PixelMap | null> {
+    try {
+      const data: Uint8Array = this.context.resourceManager.getMediaByNameSync('ball_glass');
+      const source: image.ImageSource = image.createImageSource(data.buffer as ArrayBuffer);
+      return await source.createPixelMap();
+    } catch (error) {
+      const businessError: BusinessError = error as BusinessError;
+      console.error(`[panel] ball icon load failed: ${businessError.code}`);
+      return null;
+    }
+  }
+  /**
+   * Params for loatView.bind. The icon must be omitted here: this build rejects
+   * a bound template whose icon object is a PixelMap (1300019 Invalid icon object),
+   * which silently breaks ball→card expansion.
+   */
+  paramsForBind(title: string, content: string): floatingBall.FloatingBallParams {
+    const base: floatingBall.FloatingBallParams = this.params(title, content);
+    return {
+      template: base.template,
+      title: base.title,
+      content: base.content,
+      backgroundColor: base.backgroundColor,
+      titleColor: base.titleColor,
+      contentColor: base.contentColor
+    };
+  }
   setDark(dark: boolean): void {
     this.dark = dark;
   }
@@ -44,6 +74,9 @@ export class FloatingBallPresenter {
       return false;
     }
     try {
+      if (this.icon === null) {
+        this.icon = await this.loadIcon();
+      }
       const params: floatingBall.FloatingBallParams = this.params(title, content);
       if (!this.running) {
         await controller.startFloatingBall(params);
@@ -128,6 +161,7 @@ export class FloatingBallPresenter {
         title: safeTitle,
         content: safeContent,
         backgroundColor: '#2C333D',
+        icon: this.icon === null ? undefined : this.icon,
         titleColor: '#8FB6FF',
         contentColor: '#B8C2CE'
       }
@@ -136,6 +170,7 @@ export class FloatingBallPresenter {
         title: safeTitle,
         content: safeContent,
         backgroundColor: '#FFFFFF',
+        icon: this.icon === null ? undefined : this.icon,
         titleColor: '#0A59F7',
         contentColor: '#6B7480'
       };

@@ -608,25 +608,41 @@ struct Index {
       this.ball.show(this.ballTitleLine(), this.ballContentLine());
     }
   }
-  /** 悬浮球 entry: now a self-drawn frosted block instead of the system ball. */
+  /** 悬浮球 entry: the system ball (tapping it expands our floating card). */
   private async toggleBall(): Promise<void> {
-    if (this.floatView === null) {
+    if (this.ball === null) {
       return;
     }
-    if (this.floatWindowVisible) {
-      await this.floatView.stop();
-      this.floatWindowVisible = false;
+    if (this.ballVisible) {
+      await this.ball.hide();
+      this.ballVisible = false;
       this.ballUserStopped = true;
-      this.appendLine('玻璃块已关闭');
+      this.appendLine('悬浮球已关闭');
       return;
     }
     const context: common.UIAbilityContext = getContext(this) as common.UIAbilityContext;
     const granted: boolean = await CapabilityProbe.requestFloatView(context);
     if (!granted) {
-      this.appendLine('FLOAT_VIEW 未授权，玻璃块无法显示');
-      return;
+      this.appendLine('FLOAT_VIEW 未授权，点球展开卡片会失败');
     }
-    await this.startGlass();
+    this.ball.setDark(this.darkMode);
+    let bound: boolean = false;
+    if (this.floatView !== null && FloatViewPresenter.isSupported()) {
+      const controller = await this.ball.ensureController();
+      if (controller !== null) {
+        bound = await this.floatView.bindTo(controller,
+          this.ball.paramsForBind(this.ballTitleLine(), this.ballContentLine()));
+      }
+    }
+    const ok: boolean = await this.ball.show(this.ballTitleLine(), this.ballContentLine());
+    this.ballVisible = ok;
+    this.ballUserStopped = !ok;
+    this.floatWindowVisible = false;
+    this.pairBound = bound;
+    if (bound) {
+      this.ball.clearClick();
+    }
+    this.appendLine(ok ? '悬浮球已显示（点球展开卡片）' : '悬浮球创建失败（见 hilog）');
   }
 
   /** Compact size in px (~115vp on this density); the card is the expanded size. */
@@ -1045,10 +1061,26 @@ struct Index {
         this.keepAliveMode = this.keepAlive.isRunning() ? mode : '';
         this.appendLine(this.keepAlive.isRunning() ? `自动保活：${mode}` : `自动保活失败：${mode}`);
       }
-      // Glass block: a self-drawn float window, created while the app is still in
-      // the foreground (the system rejects float windows created later).
-      if (!this.ballUserStopped && !this.floatWindowVisible && FloatViewPresenter.isSupported()) {
-        await this.startGlass();
+      // System ball, bound to our floating card. Created while the app is still in
+      // the foreground: the system rejects float windows created later, and the
+      // ball is the only carrier that survives the app going to the background.
+      if (!this.ballUserStopped && !this.ballVisible && this.ball !== null && this.ball.isSupported()) {
+        this.ball.setDark(this.darkMode);
+        let bound: boolean = false;
+        if (this.floatView !== null && FloatViewPresenter.isSupported()) {
+          const controller = await this.ball.ensureController();
+          if (controller !== null) {
+            bound = await this.floatView.bindTo(controller,
+              this.ball.paramsForBind(this.ballTitleLine(), this.ballContentLine()));
+          }
+        }
+        const shown: boolean = await this.ball.show(this.ballTitleLine(), this.ballContentLine());
+        this.ballVisible = shown;
+        this.pairBound = bound;
+        if (bound) {
+          this.ball.clearClick();
+        }
+        this.appendLine(shown ? '悬浮球已就绪（点球展开卡片）' : '悬浮球创建失败（见 hilog）');
       }
     } catch (error) {
       this.status = `同步失败：${this.describe(error)}`;
