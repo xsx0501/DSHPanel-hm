@@ -24,7 +24,7 @@ dsh --version             # 期望 DSH >= 0.2.1
 
 ```bash
 # 步骤 2：把插件装进 profile（git 直装；已发布到 npm 时可用包名，见下）
-dsh plugin --profile web add github:<OWNER>/<REPO>
+dsh plugin --profile web add github:xsx0501/DSHPanel-hm
 # 期望：输出 "+ dsh-panel-bridge ..."；出现 "declares no dsh.bundle" 属正常
 ```
 
@@ -65,7 +65,7 @@ dsh-panel-bridge qr --url https://<你的公网域名> --svg /tmp/pair.svg
 ### A. 从 git（推荐，无需 npm 账号）
 
 ```bash
-dsh plugin --profile web add github:<OWNER>/<REPO>
+dsh plugin --profile web add github:xsx0501/DSHPanel-hm
 dsh-panel-bridge enable
 ```
 
