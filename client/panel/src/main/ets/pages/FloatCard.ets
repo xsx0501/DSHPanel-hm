@@ -143,7 +143,7 @@ struct FloatCard {
     .justifyContent(FlexAlign.Center)
     .borderRadius(26)
     .systemMaterial(new uiMaterial.ImmersiveMaterial({
-      style: uiMaterial.ImmersiveStyle.REGULAR,
+      style: uiMaterial.ImmersiveStyle.ULTRA_THIN,
       interactive: true,
       applyShadow: true,
       lightEffect: { color: Theme.brand }
@@ -171,7 +171,7 @@ struct FloatCard {
           .fontSize(11)
           .fontColor(Theme.textSecondary)
           .padding({ left: 8, right: 8, top: 3, bottom: 3 })
-          .backgroundColor(Theme.cardAlt)
+          .backgroundColor(Theme.glass)
           .borderRadius(8)
           .onClick(() => {
             this.emit(EVENT_RESIZE, '', 'collapse');
@@ -205,7 +205,7 @@ struct FloatCard {
             .fontSize(10)
             .fontColor(Theme.textSecondary)
             .padding({ left: 8, right: 8, top: 3, bottom: 3 })
-            .backgroundColor(Theme.cardAlt)
+            .backgroundColor(Theme.glass)
             .borderRadius(6)
         }
       }
@@ -225,7 +225,7 @@ struct FloatCard {
         }
         .width('100%')
         .padding(8)
-        .backgroundColor(Theme.cardAlt)
+        .backgroundColor(Theme.glass)
         .borderRadius(10)
       } else {
         Text(this.activity.length > 0 ? this.activity : '等待事件…')
@@ -244,7 +244,7 @@ struct FloatCard {
           .textOverflow({ overflow: TextOverflow.Ellipsis })
           .width('100%')
           .padding(8)
-          .backgroundColor(Theme.cardAlt)
+          .backgroundColor(Theme.glass)
           .borderRadius(8)
         Row({ space: 8 }) {
           Text('拒绝')
@@ -280,7 +280,7 @@ struct FloatCard {
     .alignItems(HorizontalAlign.Start)
     .borderRadius(22)
     .systemMaterial(new uiMaterial.ImmersiveMaterial({
-      style: uiMaterial.ImmersiveStyle.THIN,
+      style: uiMaterial.ImmersiveStyle.ULTRA_THIN,
       interactive: true,
       applyShadow: true,
       lightEffect: { color: Theme.brand }

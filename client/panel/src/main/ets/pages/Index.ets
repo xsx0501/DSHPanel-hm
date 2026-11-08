@@ -1991,7 +1991,7 @@ struct Index {
     .padding({ bottom: 14 })
     .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.BOTTOM])
     .backgroundBlurStyle(BlurStyle.COMPONENT_THICK)
-    .backgroundColor(Theme.glassStrong)
+    .backgroundColor(Theme.glass)
   }
 
   @Builder
@@ -2098,7 +2098,7 @@ struct Index {
       // Immersive system material: the sheet covers the page, so the filter has real
       // content behind it to refract (unlike a separate float window).
       .systemMaterial(new uiMaterial.ImmersiveMaterial({
-        style: uiMaterial.ImmersiveStyle.REGULAR,
+        style: uiMaterial.ImmersiveStyle.ULTRA_THIN,
         interactive: true,
         lightEffect: { color: Theme.brand }
       }))
@@ -2118,7 +2118,7 @@ struct Index {
     .height(64)
     .layoutWeight(1)
     .justifyContent(FlexAlign.Center)
-    .backgroundColor(Theme.cardAlt)
+    .backgroundColor(Theme.glass)
     .borderRadius(14)
     .border({ width: 1, color: Theme.border })
     .onClick(action)
