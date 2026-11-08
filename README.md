@@ -64,6 +64,17 @@ dsh-panel-bridge qr --url https://<你的公网域名> --svg /tmp/pair.svg
 
 ---
 
+## 设计与需求文档
+
+| 文档 | 内容 |
+| --- | --- |
+| [docs/prd.md](docs/prd.md) | 产品需求基线（场景、验收口径、NFR） |
+| [docs/design.md](docs/design.md) | 技术方案：DSH 契约、承载形态（L0/L1/L2）、审批链路、安全模型、任务拆分 |
+
+> 文档里的域名统一用占位符 `dsh.example.com`，令牌一律写成 `<TOKEN>`；真实部署信息不入库。
+
+---
+
 ## 系统要求
 
 | 部分 | 要求 |
